@@ -12,13 +12,8 @@
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/interfaz/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "ahorcado/wsgi.py"
     }
   ]
 }
-

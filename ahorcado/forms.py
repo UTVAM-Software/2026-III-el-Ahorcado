@@ -19,12 +19,29 @@ MODELOS_ESPANOL = {
 }
 
 
+from django.forms.models import ModelChoiceIterator
+
+
+class SafeModelChoiceIterator(ModelChoiceIterator):
+    """Iterador seguro para opciones de ModelChoiceField ante caídas de la base de datos."""
+    def __iter__(self):
+        try:
+            yield from super().__iter__()
+        except Exception:
+            yield ('', '-- Base de datos en pausa o no disponible --')
+
+
 class SpanishContentTypeChoiceField(forms.ModelChoiceField):
-    """Campo de selección para ContentType con etiquetas formateadas en español."""
+    """Campo de selección para ContentType con etiquetas formateadas en español y tolerancia a fallos."""
+    iterator = SafeModelChoiceIterator
+
     def label_from_instance(self, obj):
-        app = 'Núcleo' if obj.app_label in ('nucleo', 'core') else obj.app_label.capitalize()
-        modelo = MODELOS_ESPANOL.get(obj.model.lower(), obj.model.capitalize())
-        return f"{app} ➔ {modelo}"
+        try:
+            app = 'Núcleo' if obj.app_label in ('nucleo', 'core') else obj.app_label.capitalize()
+            modelo = MODELOS_ESPANOL.get(obj.model.lower(), obj.model.capitalize())
+            return f"{app} ➔ {modelo}"
+        except Exception:
+            return str(obj)
 
 
 class PermissionForm(forms.ModelForm):

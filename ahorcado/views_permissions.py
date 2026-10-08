@@ -40,6 +40,9 @@ class StaffOrPermissionRequiredMixin(PermissionRequiredMixin):
         return redirect('permission_list')
 
 
+from django.db import DatabaseError, OperationalError
+
+
 class PermissionListView(StaffOrPermissionRequiredMixin, ListView):
     """
     CRUD - Listar permisos (R: Read / List).
@@ -53,20 +56,31 @@ class PermissionListView(StaffOrPermissionRequiredMixin, ListView):
     permission_required = 'auth.view_permission'
 
     def get_queryset(self):
-        qs = Permission.objects.select_related('content_type').order_by('content_type__app_label', 'content_type__model', 'name')
-        q = self.request.GET.get('q', '').strip()
-        ct_id = self.request.GET.get('content_type', '').strip()
+        try:
+            qs = Permission.objects.select_related('content_type').order_by('content_type__app_label', 'content_type__model', 'name')
+            q = self.request.GET.get('q', '').strip()
+            ct_id = self.request.GET.get('content_type', '').strip()
 
-        if q:
-            qs = qs.filter(Q(name__icontains=q) | Q(codename__icontains=q))
-        if ct_id and ct_id.isdigit():
-            qs = qs.filter(content_type_id=int(ct_id))
-        return qs
+            if q:
+                qs = qs.filter(Q(name__icontains=q) | Q(codename__icontains=q))
+            if ct_id and ct_id.isdigit():
+                qs = qs.filter(content_type_id=int(ct_id))
+            return qs
+        except (OperationalError, DatabaseError):
+            messages.warning(
+                self.request,
+                "Aviso: La base de datos remota no responde o está en pausa en Supabase. Reactiva tu proyecto en Supabase para sincronizar los datos."
+            )
+            return Permission.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['filter_form'] = PermissionFilterForm(self.request.GET or None)
-        context['total_count'] = self.get_queryset().count()
+        try:
+            context['filter_form'] = PermissionFilterForm(self.request.GET or None)
+            context['total_count'] = self.get_queryset().count()
+        except (OperationalError, DatabaseError):
+            context['filter_form'] = PermissionFilterForm()
+            context['total_count'] = 0
         return context
 
 
@@ -83,11 +97,21 @@ class PermissionDetailView(StaffOrPermissionRequiredMixin, DetailView):
     def get_queryset(self):
         return Permission.objects.select_related('content_type')
 
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except (OperationalError, DatabaseError):
+            messages.warning(request, "No se pudo obtener el permiso: la base de datos remota no responde o está en pausa en Supabase.")
+            return redirect('permission_list')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = PermissionForm(instance=self.object, read_only=True)
+        try:
+            context['form'] = PermissionForm(instance=self.object, read_only=True)
+        except Exception:
+            context['form'] = None
         context['mode'] = 'show'
-        context['action_title'] = f"Mostrar Permiso #{self.object.id}"
+        context['action_title'] = f"Mostrar Permiso #{self.object.id if self.object else ''}"
         return context
 
 
@@ -102,9 +126,20 @@ class PermissionCreateView(StaffOrPermissionRequiredMixin, CreateView):
     success_url = reverse_lazy('permission_list')
     permission_required = 'auth.add_permission'
 
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except (OperationalError, DatabaseError):
+            messages.warning(request, "La base de datos remota no responde o está en pausa en Supabase. Reactiva tu proyecto en Supabase para registrar permisos.")
+            return redirect('permission_list')
+
     def form_valid(self, form):
-        messages.success(self.request, f"El permiso '{form.instance.name}' fue creado exitosamente.")
-        return super().form_valid(form)
+        try:
+            messages.success(self.request, f"El permiso '{form.instance.name}' fue creado exitosamente.")
+            return super().form_valid(form)
+        except (OperationalError, DatabaseError):
+            messages.error(self.request, "Error al guardar: la base de datos remota no está accesible en este momento.")
+            return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -125,9 +160,20 @@ class PermissionUpdateView(StaffOrPermissionRequiredMixin, UpdateView):
     success_url = reverse_lazy('permission_list')
     permission_required = 'auth.change_permission'
 
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except (OperationalError, DatabaseError):
+            messages.warning(request, "La base de datos remota no responde o está en pausa en Supabase.")
+            return redirect('permission_list')
+
     def form_valid(self, form):
-        messages.success(self.request, f"El permiso '{form.instance.name}' fue actualizado con éxito.")
-        return super().form_valid(form)
+        try:
+            messages.success(self.request, f"El permiso '{form.instance.name}' fue actualizado con éxito.")
+            return super().form_valid(form)
+        except (OperationalError, DatabaseError):
+            messages.error(self.request, "Error al actualizar: la base de datos remota no está accesible en este momento.")
+            return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -148,9 +194,19 @@ class PermissionDeleteView(StaffOrPermissionRequiredMixin, DeleteView):
     success_url = reverse_lazy('permission_list')
     permission_required = 'auth.delete_permission'
 
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except (OperationalError, DatabaseError):
+            messages.warning(request, "La base de datos remota no responde o está en pausa en Supabase.")
+            return redirect('permission_list')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = PermissionForm(instance=self.object, read_only=True)
+        try:
+            context['form'] = PermissionForm(instance=self.object, read_only=True)
+        except Exception:
+            context['form'] = None
         context['mode'] = 'delete'
         context['action_title'] = f"Eliminar Permiso #{self.object.id}"
         context['button_text'] = 'Confirmar y Eliminar Permiso'
@@ -158,6 +214,11 @@ class PermissionDeleteView(StaffOrPermissionRequiredMixin, DeleteView):
 
     def form_valid(self, form):
         permiso_nombre = self.object.name
-        response = super().form_valid(form)
-        messages.success(self.request, f"El permiso '{permiso_nombre}' fue eliminado correctamente.")
-        return response
+        try:
+            response = super().form_valid(form)
+            messages.success(self.request, f"El permiso '{permiso_nombre}' fue eliminado correctamente.")
+            return response
+        except (OperationalError, DatabaseError):
+            messages.error(self.request, "Error al eliminar: la base de datos remota no está disponible en este momento.")
+            return redirect('permission_list')
+
