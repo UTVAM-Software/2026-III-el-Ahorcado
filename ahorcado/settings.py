@@ -6,7 +6,8 @@ from urllib.parse import urlparse, unquote
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / '.env')
+if not os.getenv('VERCEL'):
+    load_dotenv(BASE_DIR / '.env')
 mimetypes.add_type("text/javascript", ".mjs")
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', os.getenv('JWT_SECRET', ''))
@@ -59,10 +60,24 @@ WSGI_APPLICATION = 'ahorcado.wsgi.application'
 ASGI_APPLICATION = 'ahorcado.asgi.application'
 LOGIN_URL = '/register.html'
 
-url = os.getenv('DATABASE_URL') or os.getenv('PG_CONNECTION_STRING') or os.getenv('POSTGRES_URL') or os.getenv('POSTGRES_PRISMA_URL')
+url = (
+    os.getenv('POSTGRES_PRISMA_URL') or
+    os.getenv('POSTGRES_URL') or
+    os.getenv('DATABASE_URL') or
+    os.getenv('PG_CONNECTION_STRING') or
+    ''
+).strip('"\' \n\r')
+
 if not url:
-    raise RuntimeError('Configura DATABASE_URL o PG_CONNECTION_STRING de PostgreSQL.')
+    raise RuntimeError('Configura DATABASE_URL o POSTGRES_URL de PostgreSQL.')
+
 parsed = urlparse(url)
+is_ssl = (
+    'sslmode=require' in (parsed.query or '') or
+    'supabase' in (parsed.hostname or '') or
+    bool(os.getenv('VERCEL'))
+)
+
 DATABASES = {'default': {
     'ENGINE': 'django.db.backends.postgresql',
     'NAME': unquote(parsed.path.lstrip('/')),
@@ -70,8 +85,9 @@ DATABASES = {'default': {
     'PASSWORD': unquote(parsed.password or ''),
     'HOST': parsed.hostname or 'localhost',
     'PORT': parsed.port or 5432,
-    'OPTIONS': {'sslmode': 'require' if 'sslmode=require' in parsed.query else 'prefer'},
+    'OPTIONS': {'sslmode': 'require' if is_ssl else 'prefer'},
 }}
+
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'interfaz']
 STATIC_ROOT = BASE_DIR / 'archivos_estaticos'

@@ -29,3 +29,5 @@ __pycache__/
 /skills-lock.json
 interfaz/assets/icons/IMG_0020.HEIC
 interfaz/assets/icons/PHOTO-2026-08-19-12-17-56.jpg
+
+.env*
