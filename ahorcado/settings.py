@@ -14,7 +14,12 @@ if not SECRET_KEY:
     raise RuntimeError('Configura DJANGO_SECRET_KEY (o JWT_SECRET).')
 DEBUG = os.getenv('DEBUG', '').lower() == 'true'
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
+if '.vercel.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.extend(['.vercel.app', 'localhost', '127.0.0.1', '*'])
+
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
+CSRF_TRUSTED_ORIGINS.extend(['https://*.vercel.app', 'https://*.now.sh', 'http://localhost:4000', 'http://127.0.0.1:4000'])
+WHITENOISE_USE_FINDERS = True
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
