@@ -55,6 +55,23 @@ class PermissionListView(StaffOrPermissionRequiredMixin, ListView):
     paginate_by = 10
     permission_required = 'auth.view_permission'
 
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except (OperationalError, DatabaseError):
+            messages.warning(
+                request,
+                "Aviso: La base de datos remota está en pausa en Supabase. Reactiva tu proyecto en Supabase para sincronizar los datos."
+            )
+            self.object_list = Permission.objects.none()
+            context = {
+                'permisos': [],
+                'filter_form': PermissionFilterForm(),
+                'total_count': 0,
+                'is_paginated': False,
+            }
+            return self.render_to_response(context)
+
     def get_queryset(self):
         try:
             qs = Permission.objects.select_related('content_type').order_by('content_type__app_label', 'content_type__model', 'name')
@@ -67,21 +84,22 @@ class PermissionListView(StaffOrPermissionRequiredMixin, ListView):
                 qs = qs.filter(content_type_id=int(ct_id))
             return qs
         except (OperationalError, DatabaseError):
-            messages.warning(
-                self.request,
-                "Aviso: La base de datos remota no responde o está en pausa en Supabase. Reactiva tu proyecto en Supabase para sincronizar los datos."
-            )
             return Permission.objects.none()
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
         try:
+            context = super().get_context_data(**kwargs)
             context['filter_form'] = PermissionFilterForm(self.request.GET or None)
             context['total_count'] = self.get_queryset().count()
+            return context
         except (OperationalError, DatabaseError):
-            context['filter_form'] = PermissionFilterForm()
-            context['total_count'] = 0
-        return context
+            return {
+                'permisos': [],
+                'filter_form': PermissionFilterForm(),
+                'total_count': 0,
+                'is_paginated': False,
+            }
+
 
 
 class PermissionDetailView(StaffOrPermissionRequiredMixin, DetailView):

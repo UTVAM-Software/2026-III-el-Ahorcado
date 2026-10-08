@@ -59,6 +59,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'ahorcado.wsgi.application'
 ASGI_APPLICATION = 'ahorcado.asgi.application'
 LOGIN_URL = '/register.html'
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 url = (
     os.getenv('POSTGRES_PRISMA_URL') or
