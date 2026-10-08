@@ -52,6 +52,9 @@ def token_for(player):
                       os.getenv('JWT_SECRET', settings.SECRET_KEY), algorithm='HS256')
 
 
+from django.db import DatabaseError, OperationalError
+
+
 def endpoint(methods, auth=False, teacher=False):
     def decorate(view):
         @csrf_exempt
@@ -59,13 +62,16 @@ def endpoint(methods, auth=False, teacher=False):
         def wrapper(request, *args, **kwargs):
             if request.method not in methods:
                 return error('Método no permitido.', 405)
-            if auth:
-                request.player = current_player(request)
-                if request.player is None:
-                    return error('Sesión no válida o expirada.', 401)
-                if teacher and request.player.role != 'teacher':
-                    return error('Acceso denegado. Se requiere rol de profesor.', 403)
-            return view(request, *args, **kwargs)
+            try:
+                if auth:
+                    request.player = current_player(request)
+                    if request.player is None:
+                        return error('Sesión no válida o expirada.', 401)
+                    if teacher and request.player.role != 'teacher':
+                        return error('Acceso denegado. Se requiere rol de profesor.', 403)
+                return view(request, *args, **kwargs)
+            except (OperationalError, DatabaseError):
+                return error('La base de datos se encuentra temporalmente inaccesible. Si el proyecto en Supabase está pausado, reanúdalo en el dashboard.', 503)
         return wrapper
     return decorate
 

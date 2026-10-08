@@ -21,8 +21,21 @@ export async function apiFetch(url, options = {}) {
   }
 
   const response = await fetch(url, requestOptions);
-  // Usamos un try-catch porque una respuesta sin cuerpo (ej. 204 No Content) o inválida fallaría en .json()
-  const data = await response.text().then(text => text ? JSON.parse(text) : {}).catch(() => ({}));
+  let data = {};
+  try {
+    const text = await response.text();
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok && !data.error) {
+    if (response.status === 503) {
+      data.error = 'Base de datos temporalmente no disponible (503). Si estás usando Supabase, verifica que el proyecto no esté pausado.';
+    } else if (response.status >= 500) {
+      data.error = `Error interno en el servidor (${response.status}).`;
+    }
+  }
 
   return { response, data };
 }
