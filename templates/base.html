@@ -269,11 +269,15 @@
 
     <nav class="topbar-nav" aria-label="Navegación principal">
       <a href="/" class="secondary-button">🎮 Juego Principal</a>
+      <a href="{% url 'management_home' %}" class="secondary-button">⚙️ Gestión</a>
       <a href="{% url 'permission_list' %}" class="secondary-button {% if 'permisos' in request.path and 'nuevo' not in request.path %}active-tab{% endif %}">🛡️ Lista de Permisos</a>
       <a href="{% url 'permission_create' %}" class="secondary-button {% if 'nuevo' in request.path %}active-tab{% endif %}">➕ Nuevo Permiso</a>
     </nav>
 
     <div class="topbar-actions">
+      {% if request.user.is_authenticated %}
+      <form method="post" action="{% url 'django_logout' %}">{% csrf_token %}<button type="submit" class="secondary-button">Cerrar sesión</button></form>
+      {% else %}<a class="secondary-button" href="{% url 'django_login' %}">Iniciar sesión de gestión</a>{% endif %}
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Cambiar tema" aria-pressed="false" title="Cambiar tema de color">
         <span class="theme-icon sun" aria-hidden="true">☀︎</span>
         <span class="theme-icon moon" aria-hidden="true">☾</span>

@@ -16,28 +16,10 @@ from django.views.generic import (
 from ahorcado.forms import PermissionFilterForm, PermissionForm
 
 
-class StaffOrPermissionRequiredMixin(PermissionRequiredMixin):
-    """
-    Control de permisos para las vistas del CRUD.
-    - Si el usuario está autenticado, valida permisos estándar de Django (o superusuario/staff).
-    - En modo evaluación/desarrollo (o sin usuario logueado en sesión), permite acceder
-      directamente al CRUD para probar las 4 vistas.
-    """
+class StaffOrPermissionRequiredMixin(LoginRequiredMixin, PermissionRequiredMixin):
+    """Requiere sesión Django y el permiso asignado (los superusuarios tienen acceso)."""
+    login_url = '/gestion/login/'
     raise_exception = False
-    login_url = '/register.html'
-
-    def has_permission(self):
-        user = self.request.user
-        # Permite acceso directo para pruebas escolares / desarrollo si no hay sesión iniciada
-        if not user.is_authenticated:
-            return True
-        if user.is_superuser or user.is_staff:
-            return True
-        return super().has_permission()
-
-    def handle_no_permission(self):
-        messages.error(self.request, f"Permiso denegado: Se requiere '{self.permission_required}' para realizar esta acción.")
-        return redirect('permission_list')
 
 
 from django.db import DatabaseError, OperationalError

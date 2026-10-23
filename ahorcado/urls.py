@@ -1,8 +1,13 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
 from ahorcado import views_permissions
+from ahorcado.management_views import build_resource_patterns, management_home
 from nucleo import views_auth, views_words, views_games, views_daily, views_assignments, views_misc
 
 urlpatterns = [
+    path('gestion/login/', auth_views.LoginView.as_view(template_name='management/login.html'), name='django_login'),
+    path('gestion/logout/', auth_views.LogoutView.as_view(), name='django_logout'),
+    path('gestion/', management_home, name='management_home'),
     # Módulo de Gestión de Permisos (CRUD: ModelForm + CBV)
     path('permisos/', views_permissions.PermissionListView.as_view(), name='permission_list'),
     path('permisos/nuevo/', views_permissions.PermissionCreateView.as_view(), name='permission_create'),
@@ -39,3 +44,5 @@ urlpatterns = [
     path('password-recovery.html', views_misc.password_recovery_page),
     path('', views_misc.index),
 ]
+
+urlpatterns.extend(path(route, view, name=name) for route, view, name in build_resource_patterns())

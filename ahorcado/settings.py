@@ -62,7 +62,15 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = 'ahorcado.wsgi.application'
 ASGI_APPLICATION = 'ahorcado.asgi.application'
-LOGIN_URL = '/register.html'
+LOGIN_URL = '/gestion/login/'
+LOGIN_REDIRECT_URL = '/gestion/'
+LOGOUT_REDIRECT_URL = '/gestion/login/'
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 SUPABASE_PROJECT_REF = 'vhsqyvppeljmbpizzyjp'

@@ -76,11 +76,12 @@ Para habilitar Google, reemplaza el valor de ejemplo de `SUPABASE_KEY` por la cl
 
 ```bash
 python manage.py migrate
+python manage.py createsuperuser
 python manage.py seed_words
 python manage.py runserver 4000
 ```
 
-Visita `http://localhost:4000/`. La recuperación de contraseña requiere SMTP; el registro directo y el inicio de sesión no dependen del correo. Gemini es opcional y usa `GEMINI_API_KEY`.
+Visita `http://localhost:4000/`. El panel de gestión de Django está en `http://localhost:4000/gestion/`; entra con el superusuario creado arriba. Este acceso usa sesiones de Django y es independiente del inicio de sesión del juego (`Player`). El panel muestra solo módulos para los que la cuenta tiene permisos; un superusuario puede asignar permisos y grupos desde **Usuarios Django** y **Grupos Django**. La recuperación de contraseña del juego requiere SMTP; el registro directo y el inicio de sesión no dependen del correo. Gemini es opcional y usa `GEMINI_API_KEY`.
 
 En esta Mac se instaló PostgreSQL 17 con Homebrew como servicio de inicio de sesión. La base local se llama `ahorcado_django`, usa el rol `ahorcado_app` y su conexión está en `.env`. Ya tiene las migraciones y las 15 palabras iniciales. Para comprobar el servicio o iniciarlo manualmente:
 

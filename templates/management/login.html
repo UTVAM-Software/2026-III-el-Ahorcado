@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Acceso de administración · Ahorcado UTVAM{% endblock %}
+{% block content %}
+<section class="panel" style="max-width: 560px; margin: 2rem auto;">
+  <div class="eyebrow">Administración segura</div>
+  <h1>Iniciar sesión en <span>Gestión</span></h1>
+  <p class="lede">Usa una cuenta de Django con los permisos asignados para administrar el sistema.</p>
+  {% if form.errors %}<div class="alerta alerta-error" role="alert">Usuario o contraseña incorrectos.</div>{% endif %}
+  <form method="post" class="auth-form">
+    {% csrf_token %}
+    <div><label for="id_username">Usuario</label>{{ form.username }}</div>
+    <div><label for="id_password">Contraseña</label>{{ form.password }}</div>
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button type="submit">Iniciar sesión</button>
+  </form>
+</section>
+{% endblock %}
