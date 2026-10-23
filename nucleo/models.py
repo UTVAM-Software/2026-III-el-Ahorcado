@@ -1,11 +1,19 @@
 """Modelos compatibles con las tablas PostgreSQL de la aplicación anterior."""
 from django.contrib.postgres.fields import ArrayField
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
 DIFFICULTIES = [('easy', 'Fácil'), ('medium', 'Media'), ('hard', 'Difícil')]
 
 class Player(models.Model):
+    django_user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='player_profile',
+    )
     name = models.CharField(max_length=50, unique=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)

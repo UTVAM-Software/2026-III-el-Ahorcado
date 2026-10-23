@@ -22,6 +22,7 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
 from .api import body, endpoint, error, player_data, token_for
+from .auth_integration import sync_player_to_django_user
 from .models import PasswordResetToken, Player
 
 logger = getLogger(__name__)
@@ -122,6 +123,7 @@ def register(request):
                                        email=email, role=role,
                                        grade=grade.upper(), group_name=group_name.upper(),
                                        password=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode())
+        sync_player_to_django_user(player, raw_password=password)
     except IntegrityError:
         return error('El nombre de usuario o el correo electrónico ya están en uso.')
     return JsonResponse({'token': token_for(player), 'user': player_data(player)})
@@ -212,6 +214,9 @@ def google_auth(request):
     if player:
         if player.email.lower() != email:
             return error('El correo de esta cuenta de Google cambió. Contacta al administrador.', 409)
+        if not player.is_active:
+            return error('Esta cuenta está desactivada. Contacta al administrador.', 403)
+        sync_player_to_django_user(player)
         cache.delete(f'google-login:{request.META.get("REMOTE_ADDR", "unknown")}')
         return JsonResponse({'token': token_for(player), 'user': player_data(player)})
 
@@ -292,9 +297,13 @@ def google_auth(request):
                 grade=grade.upper() if role == 'student' else '',
                 group_name=group_name.upper() if role == 'student' else '',
             )
+            sync_player_to_django_user(player, raw_password=password)
     except IntegrityError:
         player = Player.objects.filter(supabase_user_id=user_id).first()
         if player and player.email.lower() == email:
+            if not player.is_active:
+                return error('Esta cuenta está desactivada. Contacta al administrador.', 403)
+            sync_player_to_django_user(player)
             cache.delete(f'google-login:{request.META.get("REMOTE_ADDR", "unknown")}')
             return JsonResponse({'token': token_for(player), 'user': player_data(player)})
         if player:
@@ -405,6 +414,7 @@ def reset_password(request):
         player = reset_request.player
         player.password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         player.save(update_fields=['password'])
+        sync_player_to_django_user(player, raw_password=password)
         PasswordResetToken.objects.filter(player=player).delete()
 
     return JsonResponse({'message': 'Tu contraseña se actualizó correctamente. Ya puedes iniciar sesión.'})
@@ -421,14 +431,23 @@ def login(request):
     if rate_limited(request):
         return error('Demasiados intentos. Intenta nuevamente en unos minutos.', 429)
     player = Player.objects.filter(Q(name=credential) | Q(email=credential.lower())).first()
-    if not player or not check_password(password, player.password):
+    if not player or not player.is_active:
+        attempts = cache.get(ip_key, 0) + 1
+        cache.set(ip_key, attempts, 300)
+        return error('Credenciales incorrectas. Por favor, verifica tu usuario y contraseña.', 401)
+    django_user = player.django_user if player.django_user_id else None
+    password_valid = check_password(password, player.password) or bool(
+        django_user and django_user.is_active and django_user.check_password(password)
+    )
+    if not password_valid:
         attempts = cache.get(ip_key, 0) + 1
         cache.set(ip_key, attempts, 300)
         return error('Credenciales incorrectas. Por favor, verifica tu usuario y contraseña.', 401)
     cache.delete(ip_key)
-    if not player.password.startswith('$2'):
+    if not player.password.startswith('$2') or not check_password(password, player.password):
         player.password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         player.save(update_fields=['password'])
+    sync_player_to_django_user(player, raw_password=password)
     return JsonResponse({'token': token_for(player), 'user': player_data(player)})
 
 
@@ -440,5 +459,8 @@ def account(request):
     if not check_password(password, request.player.password):
         return error('Contraseña incorrecta.', 401)
     with transaction.atomic():
-        request.player.delete()
+        if request.player.django_user_id:
+            request.player.django_user.delete()
+        else:
+            request.player.delete()
     return JsonResponse({'message': 'Cuenta eliminada permanentemente.'})
