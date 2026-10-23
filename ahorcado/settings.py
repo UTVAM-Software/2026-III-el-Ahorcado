@@ -71,6 +71,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+AUTHENTICATION_BACKENDS = [
+    'nucleo.auth_backends.PlayerAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 SUPABASE_PROJECT_REF = 'vhsqyvppeljmbpizzyjp'

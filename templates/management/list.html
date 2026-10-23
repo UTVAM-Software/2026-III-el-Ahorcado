@@ -7,7 +7,7 @@
     <a class="secondary-button" href="{% url 'management_home' %}">← Gestión</a>
   </div>
   <div class="tabla-contenedor"><table class="crud-table">
-    <thead><tr>{% for field in fields %}<th>{{ field.verbose_name|capfirst }}</th>{% endfor %}<th>Acciones</th></tr></thead>
+    <thead><tr>{% for field in fields %}<th>{{ field.verbose_name|capfirst }}</th>{% endfor %}{% if extra_column_label %}<th>{{ extra_column_label }}</th>{% endif %}<th>Acciones</th></tr></thead>
     <tbody>
     {% for row, values in rows %}<tr>
       {% for value in values %}<td>{{ value|default_if_none:'—' }}</td>{% endfor %}

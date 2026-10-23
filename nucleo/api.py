@@ -40,7 +40,7 @@ def current_player(request):
         return None
     try:
         payload = jwt.decode(header[7:], os.getenv('JWT_SECRET', settings.SECRET_KEY), algorithms=['HS256'])
-        return Player.objects.filter(pk=payload['id']).first()
+        return Player.objects.filter(pk=payload['id'], is_active=True).first()
     except (jwt.PyJWTError, KeyError, TypeError):
         return None
 

@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import Group, Permission
+from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
 from ahorcado.forms import PermissionForm
 from ahorcado.management_forms import GroupManagementForm, PlayerManagementForm, UserManagementForm
+from nucleo.auth_integration import sync_all_players_to_django_users
 from nucleo import models as core_models
 
 User = get_user_model()
@@ -29,6 +31,14 @@ class ProtectedManagementView(LoginRequiredMixin, PermissionRequiredMixin):
                 for field in self.object._meta.fields
                 if field.name not in {'password', 'token_hash', 'supabase_user_id'}
             ]
+            if isinstance(self.object, User):
+                player = core_models.Player.objects.filter(django_user=self.object).first()
+                if player:
+                    context['object_fields'].extend([
+                        ('Rol principal', {'student': 'Alumno', 'teacher': 'Profesor'}.get(player.role, '—')),
+                        ('Grado', player.grade or '—'),
+                        ('Grupo escolar', player.group_name or '—'),
+                    ])
         return context
 
 
@@ -57,11 +67,37 @@ class ManagementListView(ListView):
         context = super().get_context_data(**kwargs)
         context['fields'] = [field for field in self.model._meta.fields
                              if field.name not in {'password', 'token_hash', 'supabase_user_id'}]
+        if self.model is User:
+            role_names = {'student': 'Alumno', 'teacher': 'Profesor'}
+            profiles = {player.django_user_id: player for player in core_models.Player.objects.filter(
+                django_user_id__in=[row.pk for row in context['object_list']]
+            )}
+            context['extra_column_label'] = 'Rol principal'
         context['rows'] = [
-            (row, [getattr(row, field.name) for field in context['fields']])
+            (row, [getattr(row, field.name) for field in context['fields']] + (
+                [role_names.get(profiles[row.pk].role, '—') if row.pk in profiles else 'Cuenta de gestión']
+                if self.model is User else []
+            ))
             for row in context['object_list']
         ]
         return context
+
+
+class ManagementUserListView(ManagementListView):
+    def get_queryset(self):
+        sync_all_players_to_django_users()
+        return super().get_queryset()
+
+
+class ManagementPlayerDeleteView(DeleteView):
+    def form_valid(self, form):
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+        if self.object.django_user_id:
+            self.object.django_user.delete()
+        else:
+            self.object.delete()
+        return HttpResponseRedirect(success_url)
 
 
 RESOURCE_SPECS = [
@@ -88,7 +124,7 @@ def build_resource_patterns():
     for slug, label, model, app_label, model_name, form_class in RESOURCE_SPECS:
         base_name = slug.replace('-', '_')
         for action, path, parent, permission_suffix in (
-            ('list', f'gestion/{slug}/', ManagementListView, 'view'),
+            ('list', f'gestion/{slug}/', ManagementUserListView if model is User else ManagementListView, 'view'),
             ('detail', f'gestion/{slug}/<int:pk>/', DetailView, 'view'),
             ('create', f'gestion/{slug}/nuevo/', CreateView, 'add'),
             ('update', f'gestion/{slug}/<int:pk>/editar/', UpdateView, 'change'),
@@ -110,8 +146,11 @@ def build_resource_patterns():
                     attrs['fields'] = '__all__'
             if action in ('create', 'update', 'delete'):
                 attrs['success_url'] = reverse_lazy(resource_url_name(slug, 'list'))
+            parent_view = parent
+            if model is core_models.Player and action == 'delete':
+                parent_view = ManagementPlayerDeleteView
             view_class = type(f'{base_name.title().replace("_", "")} {action.title()} View',
-                              (ProtectedManagementView, parent), attrs)
+                              (ProtectedManagementView, parent_view), attrs)
             patterns.append((path, view_class.as_view(), resource_url_name(slug, action)))
     return patterns
 
