@@ -49,6 +49,10 @@ class ManagementHomeView(LoginRequiredMixin, TemplateView):
 class ManagementListView(ListView):
     paginate_by = 25
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset if queryset.ordered else queryset.order_by('pk')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['fields'] = [field for field in self.model._meta.fields
