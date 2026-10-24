@@ -9,9 +9,9 @@
 {% endblock %}
 
 {% block content %}
-<section class="panel" style="max-width: 720px; margin: 0 auto;">
+<section class="panel permission-panel">
   <!-- Encabezado con Eyebrow y Badge en Español -->
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+  <div class="permission-heading permission-heading-form">
     <div>
       <div class="eyebrow">
         {% if mode == 'create' %}Formulario de Registro
@@ -21,7 +21,7 @@
         {% endif %}
       </div>
 
-      <h1 style="font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 0.5rem;">
+      <h1 class="permission-title-form">
         {% if mode == 'create' %}Crear <span>Nuevo Permiso</span>
         {% elif mode == 'show' %}Detalle de <span>Permiso #{{ permiso.id }}</span>
         {% elif mode == 'update' %}Actualizar <span>Permiso #{{ permiso.id }}</span>
@@ -29,7 +29,7 @@
         {% endif %}
       </h1>
 
-      <p class="lede" style="margin-bottom: 0;">
+      <p class="lede permission-description">
         {% if mode == 'create' %}
           Completa los datos del formulario para dar de alta un nuevo permiso en el sistema.
         {% elif mode == 'show' %}
@@ -57,11 +57,11 @@
 
   <!-- Alerta especial únicamente en el paso de Eliminación -->
   {% if mode == 'delete' %}
-    <div class="alerta alerta-error" style="margin: 1.5rem 0;">
-      <span style="font-size: 1.3rem;">⚠️</span>
+    <div class="alerta alerta-error permission-alert">
+      <span class="permission-alert-icon">⚠️</span>
       <div>
         <strong>Atención: Esta acción no se puede deshacer.</strong>
-        <p style="margin: 4px 0 0; font-size: 0.88rem; color: #fecaca;">
+        <p class="permission-alert-message">
           El permiso será eliminado de la base de datos y se retirará automáticamente de todos los profesores, alumnos o grupos que lo posean.
         </p>
       </div>
@@ -69,7 +69,7 @@
   {% endif %}
 
   <!-- Mismo Formulario adaptado a las 4 vistas -->
-  <form method="post" class="auth-form" {% if mode != 'delete' %}novalidate{% endif %} style="margin-top: 1.5rem;">
+  <form method="post" class="auth-form permission-form" {% if mode != 'delete' %}novalidate{% endif %}>
     {% csrf_token %}
 
     {% if form.non_field_errors %}
@@ -84,18 +84,18 @@
         <label for="{{ field.id_for_label }}">
           {{ field.label }}:
           {% if field.field.required and mode != 'show' and mode != 'delete' %}
-            <span style="color: var(--accent); font-weight: 900;">*</span>
+            <span class="permission-required">*</span>
           {% endif %}
         </label>
 
         {{ field }}
 
         {% if field.help_text and mode != 'show' and mode != 'delete' %}
-          <p class="hint" style="margin-top: 6px; font-size: 0.82rem;">{{ field.help_text }}</p>
+          <p class="hint permission-help">{{ field.help_text }}</p>
         {% endif %}
 
         {% if field.errors %}
-          <ul class="errorlist" style="margin-top: 6px;">
+          <ul class="errorlist permission-errors">
             {% for error in field.errors %}
               <li>{{ error }}</li>
             {% endfor %}
@@ -107,36 +107,36 @@
     <!-- En modo Mostrar se presenta información técnica adicional en español -->
     {% if mode == 'show' and permiso %}
       <div class="info-bloque">
-        <div class="eyebrow" style="margin-bottom: 6px;">Uso en programación Django</div>
-        <p style="margin-bottom: 8px; color: var(--text);">
+        <div class="eyebrow permission-info-title">Uso en programación Django</div>
+        <p class="permission-info-description">
           Identificador del permiso para comprobaciones en código:
         </p>
         <span class="codigo-chip">{{ permiso.content_type.app_label }}.{{ permiso.codename }}</span>
-        <p class="hint" style="margin-top: 8px; font-size: 0.82rem;">
+        <p class="hint permission-info-help">
           Puedes utilizarlo con <code>request.user.has_perm('{{ permiso.content_type.app_label }}.{{ permiso.codename }}')</code> o en decoradores de vista.
         </p>
       </div>
     {% endif %}
 
     <!-- Botones y Acciones en Español -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); gap: 12px; flex-wrap: wrap;">
+    <div class="permission-footer">
       <div>
-        <a href="{% url 'permission_list' %}" class="secondary-button" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <a href="{% url 'permission_list' %}" class="secondary-button permission-back-link">
           ← Volver al listado
         </a>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <div class="permission-footer-actions">
         {% if mode == 'create' %}
           <button type="submit">
             Guardar Permiso
           </button>
 
         {% elif mode == 'show' %}
-          <a href="{% url 'permission_update' permiso.id %}" class="btn-tabla-editar" style="padding: 14px 20px; border-radius: 16px; font-size: 0.94rem; text-decoration: none;">
+          <a href="{% url 'permission_update' permiso.id %}" class="btn-tabla-editar btn-tabla-grande">
             ✎ Editar Permiso
           </a>
-          <a href="{% url 'permission_delete' permiso.id %}" class="btn-tabla-eliminar" style="padding: 14px 20px; border-radius: 16px; font-size: 0.94rem; text-decoration: none;">
+          <a href="{% url 'permission_delete' permiso.id %}" class="btn-tabla-eliminar btn-tabla-grande">
             🗑️ Eliminar Permiso
           </a>
 
@@ -146,7 +146,7 @@
           </button>
 
         {% elif mode == 'delete' %}
-          <button type="submit" style="background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 10px 24px rgba(239, 68, 68, 0.4);">
+          <button type="submit" class="permission-delete-button">
             Confirmar y Eliminar Permiso
           </button>
         {% endif %}

@@ -9,10 +9,38 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.core import mail
 from django.db import IntegrityError
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
+from ahorcado.management_views import build_resource_patterns, resource_url_name
 from .models import AssignedGame, PasswordResetToken, Player, Word
+
+
+class ManagementSafetyTests(SimpleTestCase):
+    def test_password_reset_tokens_are_read_only_in_management(self):
+        route_names = {
+            name for _, _, name in build_resource_patterns()
+            if name.startswith('manage_password_reset_tokens_')
+        }
+
+        self.assertEqual(
+            route_names,
+            {
+                resource_url_name('password-reset-tokens', 'list'),
+                resource_url_name('password-reset-tokens', 'detail'),
+            },
+        )
+
+    def test_password_reset_token_string_does_not_expose_hash(self):
+        player = Player(name='test-player')
+        token = PasswordResetToken(
+            player=player,
+            token_hash='sensitive-hash',
+            expires_at=timezone.now(),
+        )
+
+        self.assertIn(player.name, str(token))
+        self.assertNotIn(token.token_hash, str(token))
 
 
 @override_settings(
@@ -433,10 +461,8 @@ class SecurityHardeningTests(TestCase):
             grade='',
             group_name='',
         )
-        animal_words = [
+        for i in range(5):
             Word.objects.create(word=f'animal{i}', difficulty='easy', theme='Animales')
-            for i in range(5)
-        ]
 
         response = self.client.post(
             '/api/words/prepare-game',

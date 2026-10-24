@@ -1,4 +1,4 @@
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import F
 from django.http import JsonResponse
 from django.utils import timezone

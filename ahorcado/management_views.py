@@ -77,6 +77,8 @@ RESOURCE_SPECS = [
     ('permissions', 'Permisos Django', Permission, 'auth', 'permission', PermissionForm),
 ]
 
+READ_ONLY_RESOURCES = {'password-reset-tokens'}
+
 
 def resource_url_name(slug, action):
     return f'manage_{slug.replace("-", "_")}_{action}'
@@ -94,6 +96,8 @@ def build_resource_patterns():
             ('update', f'gestion/{slug}/<int:pk>/editar/', UpdateView, 'change'),
             ('delete', f'gestion/{slug}/<int:pk>/eliminar/', DeleteView, 'delete'),
         ):
+            if slug in READ_ONLY_RESOURCES and action in {'create', 'update', 'delete'}:
+                continue
             attrs = {
                 'model': model,
                 'template_name': 'management/list.html' if action == 'list' else 'management/form.html',
@@ -101,6 +105,7 @@ def build_resource_patterns():
                 'extra_context': {
                     'resource_label': label, 'resource_slug': slug, 'mode': action,
                     'list_url': resource_url_name(slug, 'list'),
+                    'read_only': slug in READ_ONLY_RESOURCES,
                 },
             }
             if action in ('create', 'update'):

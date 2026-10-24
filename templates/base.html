@@ -6,254 +6,7 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <title>{% block title %}Gestión de Permisos · Ahorcado UTVAM{% endblock %}</title>
   <link rel="stylesheet" href="/static/styles.css" />
-  <style>
-    /* Ajustes específicos para las pantallas del CRUD respetando styles.css */
-    .topbar-nav {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .topbar-nav a {
-      text-decoration: none;
-      font-size: 0.86rem;
-      padding: 8px 14px;
-      border-radius: 14px;
-      font-weight: 650;
-      transition: all 0.2s ease;
-    }
-    .topbar-nav a.active-tab {
-      background: linear-gradient(135deg, var(--primary), var(--primary-2));
-      color: #fff !important;
-      border: none;
-      box-shadow: 0 4px 14px rgba(91, 92, 240, 0.35);
-    }
-
-    /* Badges temáticos en español */
-    .badge-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 0.76rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      border: 1px solid var(--line);
-    }
-    .badge-crear {
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border-color: rgba(16, 185, 129, 0.4);
-    }
-    .badge-mostrar {
-      background: rgba(91, 92, 240, 0.15);
-      color: #93c5fd;
-      border-color: rgba(91, 92, 240, 0.4);
-    }
-    .badge-actualizar {
-      background: rgba(245, 158, 11, 0.15);
-      color: #fbbf24;
-      border-color: rgba(245, 158, 11, 0.4);
-    }
-    .badge-eliminar {
-      background: rgba(239, 68, 68, 0.18);
-      color: #fca5a5;
-      border-color: rgba(239, 68, 68, 0.5);
-    }
-
-    /* Tablas adaptadas al diseño de la aplicación */
-    .tabla-contenedor {
-      overflow-x: auto;
-      margin: 1.5rem 0;
-      border-radius: 20px;
-      border: 1px solid var(--line);
-      background: var(--field);
-    }
-    [data-theme="dark"] .tabla-contenedor {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(189, 205, 255, 0.18);
-    }
-    table.crud-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 0.92rem;
-    }
-    table.crud-table th {
-      padding: 16px 18px;
-      background: rgba(0, 0, 0, 0.15);
-      color: var(--muted);
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 800;
-      border-bottom: 1px solid var(--line);
-    }
-    table.crud-table td {
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--line);
-      vertical-align: middle;
-      color: var(--text);
-    }
-    table.crud-table tr:last-child td {
-      border-bottom: none;
-    }
-    table.crud-table tr:hover td {
-      background: rgba(255, 255, 255, 0.035);
-    }
-
-    /* Botones de acción en tabla */
-    .acciones-fila {
-      display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .btn-tabla {
-      padding: 7px 12px;
-      font-size: 0.8rem;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .btn-tabla-mostrar {
-      background: rgba(91, 92, 240, 0.14);
-      color: var(--text);
-      border: 1px solid rgba(91, 92, 240, 0.35);
-    }
-    .btn-tabla-mostrar:hover {
-      background: rgba(91, 92, 240, 0.28);
-    }
-    .btn-tabla-editar {
-      background: rgba(245, 158, 11, 0.14);
-      color: #fbbf24;
-      border: 1px solid rgba(245, 158, 11, 0.35);
-    }
-    .btn-tabla-editar:hover {
-      background: rgba(245, 158, 11, 0.28);
-    }
-    .btn-tabla-eliminar {
-      background: rgba(239, 68, 68, 0.15);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.4);
-    }
-    .btn-tabla-eliminar:hover {
-      background: rgba(239, 68, 68, 0.3);
-    }
-
-    /* Paginación */
-    .paginacion {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      margin-top: 1.5rem;
-      flex-wrap: wrap;
-    }
-    .paginacion a, .paginacion span {
-      padding: 8px 14px;
-      border-radius: 12px;
-      font-size: 0.86rem;
-      font-weight: 700;
-      text-decoration: none;
-      color: var(--text);
-      background: var(--field);
-      border: 1px solid var(--line);
-    }
-    .paginacion span.actual {
-      background: linear-gradient(135deg, var(--primary), var(--primary-2));
-      color: #fff;
-      border: none;
-      box-shadow: 0 4px 14px rgba(91, 92, 240, 0.3);
-    }
-
-    /* Mensajes de feedback / alertas */
-    .alertas-contenedor {
-      margin-bottom: 1.5rem;
-      display: grid;
-      gap: 10px;
-    }
-    .alerta {
-      padding: 14px 18px;
-      border-radius: 16px;
-      font-size: 0.92rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid var(--line);
-    }
-    .alerta-success {
-      background: rgba(16, 185, 129, 0.14);
-      border-color: rgba(16, 185, 129, 0.4);
-      color: #6ee7b7;
-    }
-    .alerta-error {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: rgba(239, 68, 68, 0.45);
-      color: #fca5a5;
-    }
-    .alerta-warning {
-      background: rgba(245, 158, 11, 0.15);
-      border-color: rgba(245, 158, 11, 0.45);
-      color: #fcd34d;
-    }
-    .alerta-info {
-      background: rgba(91, 92, 240, 0.15);
-      border-color: rgba(91, 92, 240, 0.45);
-      color: #c7d2fe;
-    }
-
-    /* Campos en modo solo lectura */
-    .form-control:disabled, .form-select:disabled {
-      background: rgba(0, 0, 0, 0.25) !important;
-      border-color: rgba(189, 205, 255, 0.15) !important;
-      color: var(--text) !important;
-      cursor: default;
-      opacity: 0.9;
-    }
-
-    .info-bloque {
-      padding: 16px 18px;
-      border-radius: 18px;
-      background: var(--field);
-      border: 1px solid var(--line);
-      margin-top: 1rem;
-    }
-    [data-theme="dark"] .info-bloque {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(189, 205, 255, 0.2);
-    }
-
-    .codigo-chip {
-      display: inline-block;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.88rem;
-      background: rgba(91, 92, 240, 0.15);
-      color: #a5b4fc;
-      padding: 4px 10px;
-      border-radius: 8px;
-      border: 1px solid rgba(91, 92, 240, 0.3);
-    }
-
-    footer.pie-pagina {
-      text-align: center;
-      padding: 30px 15px 40px;
-      color: var(--muted);
-      font-size: 0.88rem;
-    }
-
-    @media (max-width: 680px) {
-      .topbar-nav {
-        display: none;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="/static/templates.css?v=20261023" />
 </head>
 <body>
   <!-- Fondos ambientales luminosos propios de El Ahorcado -->
@@ -268,21 +21,20 @@
     </a>
 
     <nav class="topbar-nav" aria-label="Navegación principal">
-      <a href="/" class="secondary-button">🎮 Juego Principal</a>
-      <a href="{% url 'management_home' %}" class="secondary-button">⚙️ Gestión</a>
-      <a href="{% url 'permission_list' %}" class="secondary-button {% if 'permisos' in request.path and 'nuevo' not in request.path %}active-tab{% endif %}">🛡️ Lista de Permisos</a>
-      <a href="{% url 'permission_create' %}" class="secondary-button {% if 'nuevo' in request.path %}active-tab{% endif %}">➕ Nuevo Permiso</a>
+      <a href="/" class="secondary-button">Iniciar sesión</a>
+      <a href="/register.html" class="secondary-button">Registrarse</a>
     </nav>
 
     <div class="topbar-actions">
       {% if request.user.is_authenticated %}
       <form method="post" action="{% url 'django_logout' %}">{% csrf_token %}<button type="submit" class="secondary-button">Cerrar sesión</button></form>
-      {% else %}<a class="secondary-button" href="{% url 'django_login' %}">Iniciar sesión de gestión</a>{% endif %}
+      {% endif %}
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Cambiar tema" aria-pressed="false" title="Cambiar tema de color">
         <span class="theme-icon sun" aria-hidden="true">☀︎</span>
         <span class="theme-icon moon" aria-hidden="true">☾</span>
         <span class="theme-thumb" aria-hidden="true"></span>
       </button>
+      <a class="management-shortcut" href="{% url 'management_home' %}" aria-label="Ir al modo Gestión" title="Modo Gestión">⚙</a>
     </div>
   </header>
 

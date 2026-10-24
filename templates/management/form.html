@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ resource_label }} · Gestión{% endblock %}
 {% block content %}
-<section class="panel" style="max-width:900px;margin:1rem auto">
+<section class="panel management-panel-form">
   <div class="eyebrow">{{ resource_label }} · {{ mode|capfirst }}</div>
   {% if mode == 'detail' or mode == 'delete' %}<h1>{{ object }}</h1>{% else %}<h1>{% if mode == 'create' %}Crear{% else %}Editar{% endif %} <span>{{ resource_label }}</span></h1>{% endif %}
   {% if mode == 'detail' or mode == 'delete' %}
@@ -10,11 +10,11 @@
   {% if form %}<form method="post" class="auth-form">{% csrf_token %}
     {% if form.non_field_errors %}<div class="alerta alerta-error">{{ form.non_field_errors }}</div>{% endif %}
     {% for field in form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}{% for error in field.errors %}<p class="errorlist">{{ error }}</p>{% endfor %}</div>{% endfor %}
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+    <div class="management-actions">
       {% if mode == 'delete' %}<p>¿Confirmas que deseas eliminar este registro?</p><button type="submit">Eliminar</button>
       {% elif mode != 'detail' %}<button type="submit">Guardar</button>{% endif %}
-      <a class="secondary-button" href="{% url list_url %}">Volver al listado</a>
     </div>
   </form>{% endif %}
+  <a class="secondary-button" href="{% url list_url %}">Volver al listado</a>
 </section>
 {% endblock %}

@@ -2,7 +2,7 @@
 {% block title %}{{ resource_label }} · Gestión{% endblock %}
 {% block content %}
 <section class="panel">
-  <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap">
+  <div class="management-heading">
     <div><div class="eyebrow">Módulo protegido por permisos Django</div><h1>{{ resource_label }}</h1></div>
     <a class="secondary-button" href="{% url 'management_home' %}">← Gestión</a>
   </div>
@@ -13,13 +13,15 @@
       {% for value in values %}<td>{{ value|default_if_none:'—' }}</td>{% endfor %}
       <td class="acciones-fila">
         <a class="btn-tabla btn-tabla-mostrar" href="{{ row.pk }}/">Ver</a>
-        <a class="btn-tabla btn-tabla-editar" href="{{ row.pk }}/editar/">Editar</a>
-        <a class="btn-tabla btn-tabla-eliminar" href="{{ row.pk }}/eliminar/">Eliminar</a>
+        {% if not read_only %}
+          <a class="btn-tabla btn-tabla-editar" href="{{ row.pk }}/editar/">Editar</a>
+          <a class="btn-tabla btn-tabla-eliminar" href="{{ row.pk }}/eliminar/">Eliminar</a>
+        {% endif %}
       </td>
     </tr>{% empty %}<tr><td colspan="20">No hay registros.</td></tr>{% endfor %}
     </tbody>
   </table></div>
   {% if is_paginated %}<nav class="paginacion">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}<span class="actual">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Siguiente</a>{% endif %}</nav>{% endif %}
-  {% if mode == 'list' %}<div style="margin-top:1rem"><a class="btn-tabla btn-tabla-crear" href="nuevo/">Crear {{ resource_label|lower }}</a></div>{% endif %}
+  {% if mode == 'list' and not read_only %}<div class="management-create"><a class="btn-tabla btn-tabla-crear" href="nuevo/">Crear {{ resource_label|lower }}</a></div>{% endif %}
 </section>
 {% endblock %}

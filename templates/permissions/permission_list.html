@@ -5,20 +5,20 @@
 {% block content %}
 <section class="panel">
   <!-- Encabezado de la Sección -->
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+  <div class="permission-heading">
     <div>
       <div class="eyebrow">Control de Accesos y Seguridad</div>
-      <h1 style="font-size: clamp(2rem, 5vw, 3.2rem); margin-bottom: 0.5rem;">
+      <h1 class="permission-title">
         Catálogo de <span>Permisos</span>
       </h1>
-      <p class="lede" style="margin-bottom: 0;">
+      <p class="lede permission-description">
         Gestión integral de permisos del sistema para profesores, estudiantes y módulos del juego.
       </p>
     </div>
 
     <div>
-      <a href="{% url 'permission_create' %}" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
-        <button type="button" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+      <a href="{% url 'permission_create' %}" class="permission-create-link">
+        <button type="button" class="permission-create-button">
           <span>➕</span> Nuevo Permiso
         </button>
       </a>
@@ -26,36 +26,36 @@
   </div>
 
   <!-- Formulario de Búsqueda y Filtro en Español -->
-  <form method="get" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) auto; gap: 14px; align-items: end; margin-bottom: 2rem; padding: 20px; border-radius: 20px; border: 1px solid var(--line); background: var(--field);">
+  <form method="get" class="permission-search-form">
     <div>
-      <label for="{{ filter_form.q.id_for_label }}" style="font-size: 0.82rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 6px;">
+      <label for="{{ filter_form.q.id_for_label }}" class="permission-filter-label">
         {{ filter_form.q.label }}:
       </label>
       {{ filter_form.q }}
     </div>
 
     <div>
-      <label for="{{ filter_form.content_type.id_for_label }}" style="font-size: 0.82rem; font-weight: 700; color: var(--muted); display: block; margin-bottom: 6px;">
+      <label for="{{ filter_form.content_type.id_for_label }}" class="permission-filter-label">
         {{ filter_form.content_type.label }}:
       </label>
       {{ filter_form.content_type }}
     </div>
 
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <button type="submit" style="padding: 14px 22px; white-space: nowrap;">
+    <div class="permission-filter-actions">
+      <button type="submit" class="permission-filter-submit">
         Filtrar
       </button>
-      <a href="{% url 'permission_list' %}" class="secondary-button" style="text-decoration: none; padding: 14px 18px; border-radius: 16px; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center;">
+      <a href="{% url 'permission_list' %}" class="secondary-button permission-filter-reset">
         Limpiar
       </a>
     </div>
   </form>
 
   <!-- Contador de Resultados -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; color: var(--muted); font-size: 0.88rem;">
-    <span>Total de permisos encontrados: <strong style="color: var(--text);">{{ total_count }}</strong></span>
+  <div class="permission-result-count">
+    <span>Total de permisos encontrados: <strong class="permission-count-total">{{ total_count }}</strong></span>
     {% if request.GET.q or request.GET.content_type %}
-      <span class="hint" style="margin: 0; font-size: 0.84rem;">Filtros activos</span>
+      <span class="hint permission-active-filter">Filtros activos</span>
     {% endif %}
   </div>
 
@@ -64,22 +64,22 @@
     <table class="crud-table">
       <thead>
         <tr>
-          <th style="width: 70px;">ID</th>
+          <th class="permission-id-column">ID</th>
           <th>Nombre descriptivo</th>
           <th>Código (Identificador)</th>
           <th>Entidad / Modelo</th>
-          <th style="text-align: right; min-width: 250px;">Acciones</th>
+          <th class="permission-actions-column">Acciones</th>
         </tr>
       </thead>
       <tbody>
         {% for permiso in permisos %}
           <tr>
             <td>
-              <span class="codigo-chip" style="font-size: 0.82rem;">#{{ permiso.id }}</span>
+              <span class="codigo-chip permission-id">#{{ permiso.id }}</span>
             </td>
             <td>
-              <strong style="font-size: 0.96rem;">
-                <a href="{% url 'permission_detail' permiso.id %}" style="color: var(--text); text-decoration: none;" title="Consultar detalle de este permiso">
+              <strong class="permission-name">
+                <a href="{% url 'permission_detail' permiso.id %}" title="Consultar detalle de este permiso">
                   {{ permiso.name }}
                 </a>
               </strong>
@@ -88,7 +88,7 @@
               <span class="codigo-chip">{{ permiso.codename }}</span>
             </td>
             <td>
-              <span class="badge-tag badge-mostrar" style="font-size: 0.76rem;">
+              <span class="badge-tag badge-mostrar permission-model">
                 {{ permiso.content_type.app_label|capfirst }} ➔ {{ permiso.content_type.model|capfirst }}
               </span>
             </td>
@@ -108,10 +108,10 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="5" style="text-align: center; padding: 3.5rem 1.5rem; color: var(--muted);">
-              <div style="font-size: 2.2rem; margin-bottom: 10px;">🔍</div>
-              <p style="font-size: 1.05rem; font-weight: 600; color: var(--text);">No se encontraron permisos registrados.</p>
-              <p class="hint" style="margin-top: 6px;">Prueba a cambiar los términos de búsqueda o crear un nuevo permiso.</p>
+            <td colspan="5" class="permission-empty-cell">
+              <div class="permission-empty-icon">🔍</div>
+              <p class="permission-empty-title">No se encontraron permisos registrados.</p>
+              <p class="hint permission-empty-hint">Prueba a cambiar los términos de búsqueda o crear un nuevo permiso.</p>
             </td>
           </tr>
         {% endfor %}

@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import Permission
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -221,4 +220,3 @@ class PermissionDeleteView(StaffOrPermissionRequiredMixin, DeleteView):
         except (OperationalError, DatabaseError):
             messages.error(self.request, "Error al eliminar: la base de datos remota no está disponible en este momento.")
             return redirect('permission_list')
-

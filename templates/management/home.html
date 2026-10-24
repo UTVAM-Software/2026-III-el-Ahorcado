@@ -2,7 +2,7 @@
 {% block title %}Gestión del sistema · Ahorcado UTVAM{% endblock %}
 {% block content %}
 <section class="panel">
-  <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap">
+  <div class="management-heading">
     <div><div class="eyebrow">Autenticación y control de acceso</div><h1>Gestión del <span>sistema</span></h1>
       <p class="lede">Sesión de Django: {{ request.user.get_username }}.</p></div>
     <form method="post" action="{% url 'django_logout' %}">{% csrf_token %}<button type="submit" class="secondary-button">Cerrar sesión de gestión</button></form>

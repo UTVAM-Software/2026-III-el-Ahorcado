@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <title>Ahorcado UTVAM</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261021-google-auth" />
+  <link rel="stylesheet" href="/static/styles.css?v=20261023-auth-management-shortcut" />
 </head>
 <body>
   <div class="particle-field" id="particle-field" aria-hidden="true"></div>
@@ -22,6 +22,7 @@
         <span class="theme-icon moon" aria-hidden="true">☾</span>
         <span class="theme-thumb" aria-hidden="true"></span>
       </button>
+      <a class="management-shortcut" href="/gestion/" aria-label="Ir al modo Gestión" title="Modo Gestión">⚙</a>
       <button class="settings-top-btn hidden" id="settings-btn" type="button" aria-label="Configuración">
         <span class="settings-mini-icon" aria-hidden="true"></span>
       </button>
@@ -82,7 +83,7 @@
     </div>
   </div>
 
-  <div class="ranking-filters" style="margin: 15px 0;">
+  <div class="ranking-filters">
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Buscar usuario..." aria-label="Buscar usuario">
     </div>

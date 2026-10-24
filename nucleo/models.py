@@ -22,6 +22,9 @@ class Player(models.Model):
     class Meta:
         db_table = 'players'
 
+    def __str__(self):
+        return self.name
+
 
 class PasswordResetToken(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='password_reset_tokens')
@@ -31,6 +34,9 @@ class PasswordResetToken(models.Model):
 
     class Meta:
         db_table = 'password_reset_tokens'
+
+    def __str__(self):
+        return f'Token de recuperación para {self.player.name} (vence {self.expires_at:%Y-%m-%d %H:%M})'
 
 
 class Word(models.Model):
@@ -42,6 +48,10 @@ class Word(models.Model):
 
     class Meta:
         db_table = 'words'
+
+    def __str__(self):
+        return self.word
+
 
 class AssignedGame(models.Model):
     teacher = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='assigned_as_teacher', db_column='teacher_id')
@@ -55,6 +65,10 @@ class AssignedGame(models.Model):
 
     class Meta:
         db_table = 'assigned_games'
+
+    def __str__(self):
+        return f'{self.theme} para {self.student.name}'
+
 
 class Game(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE, db_column='player_id')
@@ -73,6 +87,10 @@ class Game(models.Model):
     class Meta:
         db_table = 'games'
 
+    def __str__(self):
+        return f'Partida de {self.player.name}: {self.word.word}'
+
+
 class DailyWord(models.Model):
     word = models.ForeignKey(Word, on_delete=models.PROTECT, db_column='word_id')
     set_by = models.ForeignKey(Player, null=True, blank=True, on_delete=models.SET_NULL, db_column='set_by')
@@ -82,6 +100,10 @@ class DailyWord(models.Model):
 
     class Meta:
         db_table = 'daily_words'
+
+    def __str__(self):
+        return f'{self.word.word} ({self.set_date})'
+
 
 class DailyWordAnswer(models.Model):
     daily_word = models.ForeignKey(DailyWord, on_delete=models.CASCADE, db_column='daily_word_id')
@@ -95,3 +117,6 @@ class DailyWordAnswer(models.Model):
     class Meta:
         db_table = 'daily_word_answers'
         constraints = [models.UniqueConstraint(fields=['daily_word', 'player'], name='daily_answer_unique')]
+
+    def __str__(self):
+        return f'{self.player.name}: {self.answer_letter} en {self.daily_word.word.word}'
