@@ -40,13 +40,6 @@ export async function apiFetch(url, options = {}) {
   return { response, data };
 }
 
-export async function registerUser(userData) {
-  return apiFetch('/api/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(userData),
-  });
-}
-
 export async function loginUser(usernameOrEmail, password) {
   return apiFetch('/api/auth/login', {
     method: 'POST',

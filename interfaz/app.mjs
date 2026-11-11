@@ -1,6 +1,6 @@
 import { state, setState } from './components/state.mjs';
 import { setMessage, showPanel } from './components/ui.mjs';
-import { deleteMyAccount, loadLeaderboard as fetchLeaderboard, registerUser, loginUser } from './components/api.mjs';
+import { deleteMyAccount, loadLeaderboard as fetchLeaderboard, loginUser } from './components/api.mjs';
 import { saveSession, loadSession, clearSession as clearStoredSession } from './components/session.mjs';
 import {
   getGoogleRegistrationDraft,
@@ -24,7 +24,6 @@ const elements = {
   rankingList: document.getElementById('ranking-list'),
   registerForm: document.getElementById('register-form'),
   registerChoice: document.getElementById('register-choice'),
-  registerEmailStartBtn: document.getElementById('register-email-start'),
   registerTitle: document.getElementById('register-title'),
   registerDescription: document.getElementById('register-description'),
   registerUsername: document.getElementById('register-username'),
@@ -314,12 +313,6 @@ if (elements.googleLoginBtn) {
 }
 
 if (elements.registerForm) {
-  elements.registerEmailStartBtn?.addEventListener('click', () => {
-    elements.registerChoice.classList.add('hidden');
-    elements.registerForm.classList.remove('hidden');
-    elements.registerDescription.textContent = 'Completa el formulario para crear tu cuenta.';
-  });
-
   let googleRegistrationProfile = null;
   try {
     if (new URLSearchParams(window.location.search).get('google') === 'complete') {
@@ -393,6 +386,10 @@ if (elements.registerForm) {
       elements.registerForm.reportValidity();
       return;
     }
+    if (!googleRegistrationProfile) {
+      setMessage(elements.registerMessage, 'Autoriza tu cuenta de Google para completar el registro.');
+      return;
+    }
 
     const payload = {
       name: elements.registerUsername.value.trim(),
@@ -403,38 +400,26 @@ if (elements.registerForm) {
       group_name: elements.registerGroup?.value.trim() || '',
     };
 
-    let response;
+    if (elements.registerPassword.value !== elements.registerPasswordConfirmation.value) {
+      elements.registerPasswordConfirmation.setCustomValidity('Las contraseñas no coinciden.');
+      elements.registerPasswordConfirmation.reportValidity();
+      return;
+    }
+    elements.registerPasswordConfirmation.setCustomValidity('');
+    payload.password = elements.registerPassword.value;
     let data;
-    if (googleRegistrationProfile) {
-      if (elements.registerPassword.value !== elements.registerPasswordConfirmation.value) {
-        elements.registerPasswordConfirmation.setCustomValidity('Las contraseñas no coinciden.');
-        elements.registerPasswordConfirmation.reportValidity();
-        return;
-      }
-      elements.registerPasswordConfirmation.setCustomValidity('');
-      payload.password = elements.registerPassword.value;
-      try {
-        data = await registerWithGoogle(payload);
-        response = { ok: true };
-      } catch (error) {
-        setMessage(elements.registerMessage, error.message || 'No se pudo completar el registro con Google.');
-        return;
-      }
-    } else {
-      payload.email = elements.registerEmail.value.trim().toLowerCase();
-      payload.password = elements.registerPassword.value;
-      ({ response, data } = await registerUser(payload));
+    try {
+      data = await registerWithGoogle(payload);
+    } catch (error) {
+      setMessage(elements.registerMessage, error.message || 'No se pudo completar el registro con Google.');
+      return;
     }
-    if (response.ok && data.token) {
-      if (data.user?.role !== payload.role) {
-        setMessage(elements.registerMessage, 'El rol guardado no coincide con el rol seleccionado. Inicia sesión de nuevo o contacta al administrador.');
-        return;
-      }
-      saveSession(data.token, data.user);
-      window.location.href = '/';
-    } else {
-      setMessage(elements.registerMessage, data.error || 'Error registrando usuario');
+    if (data.user?.role !== payload.role) {
+      setMessage(elements.registerMessage, 'El rol guardado no coincide con el rol seleccionado. Inicia sesión de nuevo o contacta al administrador.');
+      return;
     }
+    saveSession(data.token, data.user);
+    window.location.href = '/';
   });
 
   const startGoogleRegistration = async () => {

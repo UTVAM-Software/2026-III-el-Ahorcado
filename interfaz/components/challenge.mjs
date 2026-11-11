@@ -31,10 +31,28 @@ export function initDailyChallenge({ elements }) {
   const pendingLetters = new Set();
   let explainedGameId = null;
 
-  function renderHangman(wrongAttempts = 0) {
+  function renderHangman(wrongAttempts = 0, shouldAnimate = false) {
     challengeHangmanParts?.forEach((part) => {
-      part.classList.toggle('visible', Number(part.dataset.step) <= wrongAttempts);
+      const shouldBeVisible = Number(part.dataset.step) <= wrongAttempts;
+      const wasVisible = part.classList.contains('visible');
+
+      part.classList.toggle('visible', shouldBeVisible);
+      if (shouldBeVisible && !wasVisible) {
+        part.classList.remove('part-appearing');
+        void part.getBoundingClientRect();
+        part.classList.add('part-appearing');
+      }
     });
+
+    const stage = challengeHangmanParts?.[0]?.closest('.hangman-stage');
+    if (shouldAnimate && stage) {
+      stage.classList.remove('is-animating');
+      void stage.offsetWidth;
+      stage.classList.add('is-animating');
+    } else if (wrongAttempts === 0) {
+      stage?.classList.remove('is-animating');
+    }
+
     if (challengeAttemptMeterFill) {
       challengeAttemptMeterFill.style.width = `${Math.min(100, (wrongAttempts / 6) * 100)}%`;
     }
@@ -153,7 +171,7 @@ export function initDailyChallenge({ elements }) {
         ? `Pista: se reveló la letra “${data.hint.toUpperCase()}”. ${data.learningHint || ''}`.trim()
         : 'Recibes una pista cada dos fallos.';
     }
-    renderHangman(data.wrongAttempts);
+    renderHangman(data.wrongAttempts, Boolean(newWrongGuess));
     renderKeypad(data.guessedLetters, data.wrongLetters, data.status);
 
     challengeMessage?.classList.remove('result-message', 'win', 'lose');
