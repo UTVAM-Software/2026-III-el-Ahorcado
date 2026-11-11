@@ -11,10 +11,6 @@
   text-align: center;
 }
 
-.visitor-demo .management-shortcut {
-  display: none;
-}
-
 .visitor-demo #exit-visitor-mode {
   display: inline-flex;
   align-items: center;

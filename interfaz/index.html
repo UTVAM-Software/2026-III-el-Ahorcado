@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <title>Ahorcado UTVAM</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261110-compact-responsive-login" />
+  <link rel="stylesheet" href="/static/styles.css?v=20261110-restore-management-home" />
 </head>
 <body>
   <div class="particle-field" id="particle-field" aria-hidden="true"></div>
@@ -23,7 +23,7 @@
         <span class="theme-icon moon" aria-hidden="true">☾</span>
         <span class="theme-thumb" aria-hidden="true"></span>
       </button>
-      <a class="management-shortcut" href="/gestion/" aria-label="Ir al modo Gestión" title="Modo Gestión">⚙</a>
+      <a class="management-shortcut" id="management-shortcut" href="/gestion/" aria-label="Ir al modo Gestión" title="Modo Gestión">⚙</a>
       <button class="settings-top-btn hidden" id="settings-btn" type="button" aria-label="Configuración">
         <span class="settings-mini-icon" aria-hidden="true"></span>
       </button>
@@ -106,8 +106,13 @@
     </div>
 
     <section class="panel hidden" id="home-panel">
-      <h1>Bienvenido, <span id="welcome-name"></span></h1>
-      <p id="welcome-role-text">Elige qué quieres hacer:</p>
+      <div class="welcome-header">
+        <div class="welcome-copy">
+          <h1>¡Bienvenido,<br /><span id="welcome-name" class="gradient-text"></span>!</h1>
+          <p id="welcome-role-text">Elige qué quieres hacer:</p>
+        </div>
+        <div class="avatar-container" id="welcome-avatar" aria-hidden="true">U</div>
+      </div>
       <div class="home-actions">
         <button id="play-game-btn" class="action-btn">
           <img class="action-icon-img" src="/static/assets/icons/play-word-game.png" alt="" aria-hidden="true" />

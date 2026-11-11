@@ -384,6 +384,7 @@ function filterWords() {
 }
 
 function enterAsVisitor() {
+  byId('welcome-avatar').textContent = 'V';
   byId('welcome-name').textContent = 'Visitante';
   byId('welcome-role-text').textContent = 'Elige qué quieres hacer:';
   byId('settings-btn')?.classList.remove('hidden');
