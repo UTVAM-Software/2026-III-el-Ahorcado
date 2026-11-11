@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <title>Registrarse - Ahorcado</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261110-google-only" />
+  <link rel="stylesheet" href="/static/styles.css?v=20261111-registro-correo" />
 </head>
 <body>
   <div class="particle-field" id="particle-field" aria-hidden="true"></div>
@@ -22,7 +22,7 @@
     <section class="panel" id="register-panel">
       <p class="eyebrow">Únete al juego</p>
       <h1 id="register-title">Crear cuenta</h1>
-      <p id="register-description">Crea tu cuenta con Google para continuar.</p>
+      <p id="register-description">Elige cómo quieres crear tu cuenta. Después indicarás si eres alumno o profesor.</p>
 
       <div id="register-choice" class="register-choice">
         <button type="button" id="google-register-btn" class="google-auth-button auth-option">
@@ -34,14 +34,28 @@
           </svg>
           <span class="auth-option-text">
             <strong>Continuar con Google</strong>
-            <small>Usa tu cuenta de Google</small>
+            <small>Rápido y sin crear otra contraseña</small>
           </span>
         </button>
 
-        <p class="register-login-hint">¿Ya tienes cuenta? <a href="/" id="back-to-login" class="back-link">Inicia sesión</a></p>
+        <div class="auth-divider" role="presentation"><span>o</span></div>
+
+        <button type="button" id="register-email-start" class="secondary-button auth-option">
+          <svg class="auth-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="5" width="18" height="14" rx="3"/>
+            <path d="m4 7 8 6 8-6"/>
+          </svg>
+          <span class="auth-option-text">
+            <strong>Registrarme con correo</strong>
+            <small>Usuario, correo y contraseña</small>
+          </span>
+        </button>
+
+        <p class="register-login-hint">¿Ya tienes cuenta? <a href="/" id="back-to-login">Inicia sesión</a></p>
       </div>
 
       <form id="register-form" class="auth-form hidden" novalidate>
+        
         <label for="register-username">Nombre de usuario:</label>
         <input 
           type="text" 
@@ -91,7 +105,7 @@
             title="Ingresa un correo válido, por ejemplo nombre@dominio.com."
             required
           />
-          <small class="email-hint" id="register-email-hint">Correo verificado por Google.</small>
+          <small class="email-hint" id="register-email-hint">Usa un correo válido de hasta 100 caracteres.</small>
           <p class="field-error" id="register-email-error" aria-live="polite"></p>
         </div>
 
@@ -149,15 +163,15 @@
             />
           </div>
           <small class="email-hint hidden" id="google-password-requirements">
-            Elige una contraseña segura para tu cuenta.
+            Elige una contraseña que puedas usar para iniciar sesión sin Google: de 12 a 72 caracteres, con mayúsculas, minúsculas y números.
           </small>
         </div>
 
         <div class="auth-actions">
           <button type="submit" id="register-form-btn">Crear cuenta</button>
-          <a href="/" class="secondary-button">Volver al inicio de sesión</a>
+          <a href="/" class="secondary-button">Volver al login</a>
         </div>
-        <button type="button" id="google-register-retry-btn" class="google-auth-button">Volver a autorizar con Google</button>
+        <button type="button" id="google-register-retry-btn" class="google-auth-button hidden">Volver a autorizar con Google</button>
       </form>
       
       <div class="message" id="register-message" aria-live="polite"></div>
@@ -166,6 +180,6 @@
 
   <script src="/static/components/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="/static/app.mjs?v=20261111-password-login"></script>
+  <script type="module" src="/static/app.mjs?v=20261111-registro-correo"></script>
 </body>
 </html>
