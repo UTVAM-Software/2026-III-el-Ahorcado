@@ -54,6 +54,7 @@ const elements = {
   teacherPanel: document.getElementById('teacher-panel'),
   speedChallengePanel: document.getElementById('speed-challenge-panel'),
   welcomeName: document.getElementById('welcome-name'),
+  welcomeAvatar: document.getElementById('welcome-avatar'),
   playGameBtn: document.getElementById('play-game-btn'),
   speedChallengeBtn: document.getElementById('speed-challenge-btn'),
   teacherBtn: document.getElementById('teacher-btn'),
@@ -224,8 +225,16 @@ async function setUserSession(data) {
   showPanel(elements.teacherPanel, false);
   showPanel(elements.speedChallengePanel, false);
 
-  if (elements.welcomeName) {
-    elements.welcomeName.textContent = data.user.name;
+  const displayName = typeof data.user.name === 'string' ? data.user.name.trim() : '';
+  if (elements.welcomeName) elements.welcomeName.textContent = displayName;
+  if (elements.welcomeAvatar) {
+    elements.welcomeAvatar.textContent = displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => Array.from(part)[0])
+      .join('')
+      .toLocaleUpperCase('es') || 'f';
   }
   elements.settingsBtn?.classList.remove('hidden');
 

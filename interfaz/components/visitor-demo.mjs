@@ -270,7 +270,6 @@ async function loadVisitorWordBank() {
 function setUpVisitorMode() {
   document.body.classList.add('visitor-demo');
   byId('visitor-write-warning')?.classList.remove('hidden');
-  document.querySelector('.management-shortcut')?.classList.add('hidden');
   byId('exit-visitor-mode')?.classList.remove('hidden');
   byId('login-btn')?.classList.add('hidden');
   byId('show-register-btn')?.classList.add('hidden');
@@ -384,6 +383,7 @@ function filterWords() {
 }
 
 function enterAsVisitor() {
+  byId('welcome-avatar').textContent = 'V';
   byId('welcome-name').textContent = 'Visitante';
   byId('welcome-role-text').textContent = 'Elige qué quieres hacer:';
   byId('settings-btn')?.classList.remove('hidden');
