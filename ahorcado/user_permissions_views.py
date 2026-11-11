@@ -36,7 +36,7 @@ ACTION_LABELS = {'view': 'Ver', 'add': 'Crear', 'change': 'Editar', 'delete': 'E
 MODULE_LABELS = {
     'player': 'Jugadores', 'word': 'Palabras', 'assignedgame': 'Actividades asignadas', 'game': 'Partidas',
     'dailyword': 'Palabras del día', 'dailywordanswer': 'Respuestas diarias',
-    'passwordresettoken': 'Tokens de recuperación', 'user': 'Usuarios', 'group': 'Grupos', 'permission': 'Permisos',
+    'passwordresettoken': 'Tokens de recuperación', 'emailactivationtoken': 'Tokens de activación', 'user': 'Usuarios', 'group': 'Grupos', 'permission': 'Permisos',
 }
 SECTION_LABELS = {'core': 'Juego', 'auth': 'Cuentas y acceso'}
 SECTION_DESCRIPTIONS = {
@@ -51,6 +51,7 @@ MODULE_DESCRIPTIONS = {
     'dailyword': 'Palabra del día publicada para todos.',
     'dailywordanswer': 'Respuestas de los alumnos a la palabra del día.',
     'passwordresettoken': 'Enlaces de recuperación de contraseña. Información sensible.',
+    'emailactivationtoken': 'Enlaces para activar cuentas por correo. Información sensible.',
     'user': 'Cuentas que pueden entrar al panel de gestión.',
     'group': 'Roles y los permisos que heredan sus miembros.',
     'permission': 'Catálogo de permisos del sistema.',

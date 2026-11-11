@@ -837,3 +837,19 @@ body:has(.up-panel) .topbar{width:min(1280px,calc(100% - 32px))}
   .up-table .up-cell-actions .btn-tabla{display:flex;justify-content:center;width:100%}
   .up-table .permission-empty-cell{grid-column:1/-1;text-align:center}
 }
+
+/* ===== Permisos por usuario: ancho y responsive ===== */
+body:has(.pm-panel) .app,body:has(.pm-panel) .topbar{width:min(1280px,calc(100% - 32px))}
+.pm-panel{max-width:none}
+.pm-readonly-toggle{max-width:none}
+@media(max-width:900px){
+  body:has(.pm-panel) .app,body:has(.pm-panel) .topbar{width:calc(100% - 20px)}
+}
+@media(max-width:680px){
+  .pm-row{grid-template-columns:minmax(0,1fr)}
+  .pm-seg{display:flex;width:100%;justify-self:stretch}
+  .pm-seg label{flex:1;min-width:0}
+  .pm-seg span{padding:8px 4px;text-align:center}
+  .pm-custom-toggle{justify-self:start}
+  .pm-row>.pm-custom{grid-column:1/-1}
+}
