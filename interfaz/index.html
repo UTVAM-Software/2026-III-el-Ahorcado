@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <title>Ahorcado UTVAM</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261110-remove-creator-credits" />
+  <link rel="stylesheet" href="/static/styles.css?v=20261110-compact-responsive-login" />
 </head>
 <body>
   <div class="particle-field" id="particle-field" aria-hidden="true"></div>
@@ -65,9 +65,9 @@
               <button type="submit" id="login-btn">Iniciar sesión</button>
               <button type="button" id="show-register-btn" class="secondary-button">Registrarse</button>
             </div>
-            <button type="button" id="google-login-btn" class="google-auth-button">Continuar con Google</button>
+            <button type="button" id="google-login-btn" class="google-auth-button">Iniciar sesión con Google</button>
             <button type="button" id="visitor-login-btn" class="secondary-button">Entrar como visitante</button>
-            <a class="password-recovery-link" href="/password-recovery.html">¿Olvidaste tu contraseña?</a>
+            <a id="password-recovery-link" class="password-recovery-link" href="/password-recovery.html">¿Olvidaste tu contraseña?</a>
           </form>
         </div>
 
@@ -223,6 +223,23 @@
         </div>
       </form>
 
+      <div class="screen-credits" aria-label="Créditos de los creadores">
+        <span class="credits-title">Creadores:</span>
+        <div class="creator-credits">
+          <div class="creator-credit">
+            <img src="/static/assets/creators/joshua-torres.jpg" alt="Joshua Torres" />
+            <span>Joshua Torres · 5561042358</span>
+          </div>
+          <div class="creator-credit">
+            <img src="/static/assets/creators/diego-hernandez.jpg" alt="Diego Hernandez" />
+            <span>Diego Hernandez · 5575412997</span>
+          </div>
+          <div class="creator-credit">
+            <img src="/static/assets/creators/francisco-hernandez.jpeg" alt="Francisco Hernandez" />
+            <span>Francisco Hernandez · 7711274265</span>
+          </div>
+        </div>
+      </div>
     </section>
     <section class="panel hidden" id="teacher-panel">
       <div id="visitor-write-warning" class="visitor-write-warning hidden" role="note">
@@ -525,7 +542,7 @@
 
   <script src="/static/components/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="/static/visitor-demo.css?v=20261110-visitor-db-words" />
-  <script type="module" src="/static/components/boot.mjs?v=20261110-visitor-db-words"></script>
+  <link rel="stylesheet" href="/static/visitor-demo.css?v=20261110-google-only" />
+  <script type="module" src="/static/components/boot.mjs?v=20261111-password-login"></script>
 </body>
 </html>

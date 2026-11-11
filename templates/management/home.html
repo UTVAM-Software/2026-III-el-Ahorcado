@@ -5,7 +5,6 @@
   <div class="management-heading">
     <div><div class="eyebrow">Autenticación y control de acceso</div><h1>Gestión del <span>sistema</span></h1>
       <p class="lede">Sesión de Django: {{ request.user.get_username }}.</p></div>
-    <form method="post" action="{% url 'django_logout' %}">{% csrf_token %}<button type="submit" class="secondary-button">Cerrar sesión de gestión</button></form>
   </div>
   {% if perms.auth.view_user %}
   <a class="management-feature" href="{% url 'user_permissions_list' %}">
