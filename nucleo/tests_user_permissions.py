@@ -125,12 +125,12 @@ class UserPermissionsPanelTests(TestCase):
         self.assertEqual(list(self.teacher.user_permissions.values_list('codename', flat=True)), ['view_word'])
         self.assertEqual(list(self.teacher.groups.values_list('name', flat=True)), ['Supervisor'])
 
-    def test_public_registration_endpoint_is_disabled(self):
+    def test_public_registration_rejects_supervisor_role(self):
         response = self.client.post('/api/auth/register', {
             'name': 'nuevo_sup', 'first_name': 'Nuevo', 'last_name': 'Sup', 'email': 'nuevo@example.com',
             'password': 'Password-Segura-123', 'role': 'supervisor',
         }, content_type='application/json')
-        self.assertEqual(response.status_code, 410)
+        self.assertEqual(response.status_code, 400)
         self.assertFalse(Player.objects.filter(name='nuevo_sup').exists())
 
     def test_superuser_can_create_superuser_from_management(self):

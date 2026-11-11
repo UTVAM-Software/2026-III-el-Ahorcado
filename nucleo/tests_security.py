@@ -9,14 +9,11 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.core import mail
 from django.db import IntegrityError
-from django.http import JsonResponse
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
-import bcrypt
 
 from ahorcado.management_views import build_resource_patterns, resource_url_name
 from .models import AssignedGame, PasswordResetToken, Player, Word
-from .views_auth import player_data, token_for
 
 
 class ManagementSafetyTests(SimpleTestCase):
@@ -47,28 +44,6 @@ class ManagementSafetyTests(SimpleTestCase):
 
 
 class VisitorDemoTests(SimpleTestCase):
-    def test_public_email_registration_endpoint_is_disabled(self):
-        response = self.client.post(
-            '/api/auth/register',
-            {'name': 'testuser', 'email': 'test@example.com', 'password': 'SecurePass123'},
-            content_type='application/json',
-        )
-
-        self.assertEqual(response.status_code, 410)
-
-    def test_login_keeps_password_and_signup_uses_google(self):
-        login = self.client.get('/')
-        registration = self.client.get('/register.html')
-        login_content = b''.join(login.streaming_content).decode()
-        registration_content = b''.join(registration.streaming_content).decode()
-
-        self.assertIn('id="login-form"', login_content)
-        self.assertIn('id="auth-name"', login_content)
-        self.assertIn('id="auth-password"', login_content)
-        self.assertIn('id="password-recovery-link"', login_content)
-        self.assertIn('id="google-register-btn"', registration_content)
-        self.assertNotIn('id="register-email-start"', registration_content)
-
     def test_visitor_route_serves_the_interactive_application_shell(self):
         response = self.client.get('/visita/')
         content = b''.join(response.streaming_content).decode()
@@ -135,19 +110,22 @@ class SecurityHardeningTests(TestCase):
         cache.clear()
         mail.outbox.clear()
 
-    def create_player(self, name='testuser', email='test@example.com', password='SecurePass123',
-                      role='student', grade='1° secundaria', group_name='A'):
-        player = Player.objects.create(
-            name=name,
-            first_name='Test',
-            last_name='User',
-            email=email,
-            password=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode(),
-            role=role,
-            grade=grade.upper(),
-            group_name=group_name.upper(),
+    def register(self, name='testuser', email='test@example.com', password='SecurePass123',
+                 role='student', grade='1° secundaria', group_name='A'):
+        return self.client.post(
+            '/api/auth/register',
+            {
+                'name': name,
+                'first_name': 'Test',
+                'last_name': 'User',
+                'email': email,
+                'role': role,
+                'grade': grade,
+                'group_name': group_name,
+                'password': password,
+            },
+            content_type='application/json',
         )
-        return JsonResponse({'token': token_for(player), 'user': player_data(player)})
 
     def test_google_auth_config_is_not_cached(self):
         response = self.client.get('/api/auth/google/config')
@@ -155,9 +133,15 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('no-store', response['Cache-Control'])
 
-    def test_existing_account_can_login_with_username_and_password(self):
-        self.create_player()
+    def test_registration_creates_account_directly(self):
+        response = self.register()
 
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('token', response.json())
+        self.assertEqual(response.json()['user']['email'], 'test@example.com')
+        self.assertEqual(response.json()['user']['grade'], '1° SECUNDARIA')
+        self.assertEqual(response.json()['user']['group_name'], 'A')
+        self.assertTrue(Player.objects.filter(email='test@example.com').exists())
         login = self.client.post(
             '/api/auth/login',
             {'credential': 'testuser', 'password': 'SecurePass123'},
@@ -331,6 +315,8 @@ class SecurityHardeningTests(TestCase):
             patch('nucleo.views_auth.verify_supabase_access_token', return_value=(supabase_user, None)),
             patch.object(Player.objects, 'filter', side_effect=filter_with_concurrent_player),
             patch.object(Player.objects, 'create', side_effect=IntegrityError('concurrent unique insert')),
+            # The concurrent player only exists in memory, so skip the Django Auth sync.
+            patch('nucleo.views_auth.sync_player_to_django_user'),
         ):
             response = self.client.post(
                 '/api/auth/google',
@@ -396,7 +382,7 @@ class SecurityHardeningTests(TestCase):
         verify.assert_not_called()
 
     def test_google_auth_does_not_automatically_link_existing_email(self):
-        self.create_player()
+        self.register()
         supabase_user = {
             'id': 'different-supabase-user',
             'email': 'test@example.com',
@@ -443,15 +429,35 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['user']['email'], 'linked@example.com')
 
-    def test_teacher_student_list_includes_grade_and_group_for_filtering(self):
-        teacher_response = self.create_player(
+    def test_student_registration_requires_grade_and_group(self):
+        response = self.register(grade='', group_name='')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('grado y grupo', response.json()['error'])
+        self.assertFalse(Player.objects.filter(email='test@example.com').exists())
+
+    def test_teacher_registration_does_not_require_student_group(self):
+        response = self.register(
             name='teacheruser',
             email='teacher@example.com',
             role='teacher',
             grade='',
             group_name='',
         )
-        self.create_player(name='studentone', email='student@example.com', grade='2° secundaria', group_name='B')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['user']['role'], 'teacher')
+        self.assertEqual(response.json()['user']['grade'], '')
+
+    def test_teacher_student_list_includes_grade_and_group_for_filtering(self):
+        teacher_response = self.register(
+            name='teacheruser',
+            email='teacher@example.com',
+            role='teacher',
+            grade='',
+            group_name='',
+        )
+        self.register(name='studentone', email='student@example.com', grade='2° secundaria', group_name='B')
 
         response = self.client.get(
             '/api/assignments/students',
@@ -464,15 +470,15 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(response.json()[0]['group_name'], 'B')
 
     def test_teacher_can_assign_the_same_word_set_to_all_students_in_a_group(self):
-        teacher_response = self.create_player(
+        teacher_response = self.register(
             name='teacheruser',
             email='teacher@example.com',
             role='teacher',
             grade='',
             group_name='',
         )
-        first_student = self.create_player(name='studentone', email='student1@example.com')
-        second_student = self.create_player(
+        first_student = self.register(name='studentone', email='student1@example.com')
+        second_student = self.register(
             name='studenttwo',
             email='student2@example.com',
             grade='1° secundaria',
@@ -506,7 +512,7 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(set(assignments[0].word_ids), {word.id for word in words})
 
     def test_prepare_game_matches_theme_without_case_sensitivity(self):
-        teacher_response = self.create_player(
+        teacher_response = self.register(
             name='animalteacher',
             email='animalteacher@example.com',
             role='teacher',
@@ -538,8 +544,26 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(len(returned_ids), 5)
         self.assertTrue(returned_ids.issubset(available_ids))
 
+    def test_register_rejects_malformed_email(self):
+        response = self.register(name='invalidemail', email='student@invalid_domain.com')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('correo', response.json()['error'].lower())
+
+    def test_register_rejects_email_longer_than_model_limit(self):
+        response = self.register(name='longemail', email=f'{"a" * 90}@example.com')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('100 caracteres', response.json()['error'])
+
+    def test_register_rejects_weak_password(self):
+        response = self.register(name='alice', email='alice@example.com', password='abc123')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('contraseña', response.json()['error'].lower())
+
     def test_login_bruteforce_is_rate_limited(self):
-        self.create_player(name='bob', email='bob@example.com')
+        self.register(name='bob', email='bob@example.com')
 
         responses = []
         for _ in range(6):
@@ -553,7 +577,7 @@ class SecurityHardeningTests(TestCase):
         self.assertIn(429, responses)
 
     def test_password_reset_email_and_token_can_change_password_once(self):
-        self.create_player()
+        self.register()
 
         response = self.client.post(
             '/api/auth/password-reset',
@@ -607,7 +631,7 @@ class SecurityHardeningTests(TestCase):
         PUBLIC_APP_URL='',
     )
     def test_password_reset_works_in_local_console_mode_without_smtp(self):
-        self.create_player()
+        self.register()
         output = io.StringIO()
         with redirect_stdout(output):
             response = self.client.post(
@@ -641,7 +665,7 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(login.status_code, 200)
 
     def test_password_reset_request_does_not_disclose_unknown_email(self):
-        self.create_player()
+        self.register()
         known_email_response = self.client.post(
             '/api/auth/password-reset',
             {'email': 'test@example.com'},
@@ -709,7 +733,7 @@ class SecurityHardeningTests(TestCase):
 
     @patch('nucleo.views_auth.send_mail', side_effect=OSError('SMTP unavailable'))
     def test_password_reset_email_failure_is_logged_without_exposing_account(self, send_mail_mock):
-        self.create_player()
+        self.register()
 
         response = self.client.post(
             '/api/auth/password-reset',
