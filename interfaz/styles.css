@@ -1031,6 +1031,29 @@ button{border:0;border-radius:16px;padding:14px 19px;color:#fff;font-weight:720;
   height: 40px;
 }
 
+.management-shortcut {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--field);
+  text-decoration: none;
+  font-size: 1rem;
+  line-height: 1;
+  transition: border-color .2s, background .2s, transform .2s;
+}
+
+.management-shortcut:hover {
+  border-color: var(--primary);
+  background: var(--glass-strong);
+  transform: translateY(-1px);
+}
+
 .ranking-filters {
   margin: 15px 0;
 }

@@ -59,6 +59,7 @@ const elements = {
   speedChallengeBtn: document.getElementById('speed-challenge-btn'),
   teacherBtn: document.getElementById('teacher-btn'),
   settingsBtn: document.getElementById('settings-btn'),
+  managementShortcut: document.getElementById('management-shortcut'),
   logoutBtn: document.getElementById('logout-btn'),
   settingsLogoutBtn: document.getElementById('settings-logout-btn'),
   backToHomeBtn: document.getElementById('back-to-home-btn'),
@@ -224,6 +225,7 @@ async function setUserSession(data) {
   showPanel(elements.gamePanel, false);
   showPanel(elements.teacherPanel, false);
   showPanel(elements.speedChallengePanel, false);
+  elements.managementShortcut?.classList.add('hidden');
 
   const displayName = typeof data.user.name === 'string' ? data.user.name.trim() : '';
   if (elements.welcomeName) elements.welcomeName.textContent = displayName;
@@ -256,6 +258,7 @@ function logout() {
   clearStoredSession();
   setState({ token: null, user: null });
   elements.settingsBtn?.classList.add('hidden');
+  elements.managementShortcut?.classList.remove('hidden');
   showPanel(elements.loginLayout, true);
   showPanel(elements.homePanel, false);
   showPanel(elements.settingsPanel, false);

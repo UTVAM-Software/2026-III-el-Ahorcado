@@ -270,6 +270,7 @@ async function loadVisitorWordBank() {
 function setUpVisitorMode() {
   document.body.classList.add('visitor-demo');
   byId('visitor-write-warning')?.classList.remove('hidden');
+  document.querySelector('.management-shortcut')?.classList.add('hidden');
   byId('exit-visitor-mode')?.classList.remove('hidden');
   byId('login-btn')?.classList.add('hidden');
   byId('show-register-btn')?.classList.add('hidden');
