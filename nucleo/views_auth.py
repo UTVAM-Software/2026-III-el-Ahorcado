@@ -16,14 +16,13 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
-from django.db.models import Q
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
 from .api import body, endpoint, error, player_data, token_for
 from .auth_integration import sync_player_to_django_user
-from .models import PasswordResetToken, Player
+from .models import PasswordResetToken, Player, find_player_by_credential
 
 logger = getLogger(__name__)
 
@@ -397,7 +396,7 @@ def login(request):
     ip_key = f'login:{request.META.get("REMOTE_ADDR", "unknown")}'
     if rate_limited(request):
         return error('Demasiados intentos. Intenta nuevamente en unos minutos.', 429)
-    player = Player.objects.filter(Q(name=credential) | Q(email=credential.lower())).first()
+    player = find_player_by_credential(credential)
     if not player or not player.is_active:
         attempts = cache.get(ip_key, 0) + 1
         cache.set(ip_key, attempts, 300)

@@ -2,10 +2,9 @@ import bcrypt
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
-from django.db.models import Q
 
 from .auth_integration import sync_player_to_django_user
-from .models import Player
+from .models import Player, find_player_by_credential
 
 
 class PlayerAuthBackend(ModelBackend):
@@ -15,9 +14,7 @@ class PlayerAuthBackend(ModelBackend):
         credential = username or kwargs.get('email')
         if not credential or not password:
             return None
-        player = Player.objects.select_related('django_user').filter(
-            Q(name=credential) | Q(email__iexact=credential)
-        ).first()
+        player = find_player_by_credential(credential, Player.objects.select_related('django_user'))
         if player is None:
             return None
         if not player.is_active:
