@@ -4,6 +4,7 @@ from itertools import groupby
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
@@ -12,6 +13,9 @@ from django.views.generic import ListView, TemplateView
 from nucleo.auth_integration import (
     ROLE_GROUPS,
     ROLE_LABELS,
+    MANAGEMENT_READ_ONLY_GROUP,
+    has_management_permission,
+    is_management_read_only,
     managed_permissions,
     read_only_permissions,
     sync_all_players_to_django_users,
@@ -76,6 +80,14 @@ class UserPermissionAccessMixin(LoginRequiredMixin, PermissionRequiredMixin):
     login_url = '/gestion/login/'
     permission_required = 'auth.view_user'
 
+    def has_permission(self):
+        return has_management_permission(self.request.user, self.permission_required)
+
+    def handle_no_permission(self):
+        if is_management_read_only(self.request.user):
+            self.raise_exception = True
+        return super().handle_no_permission()
+
 
 class UserPermissionListView(UserPermissionAccessMixin, ListView):
     template_name = 'management/user_permissions_list.html'
@@ -83,11 +95,12 @@ class UserPermissionListView(UserPermissionAccessMixin, ListView):
     context_object_name = 'users'
 
     def get(self, request, *args, **kwargs):
-        sync_all_players_to_django_users()
+        if not is_management_read_only(request.user):
+            sync_all_players_to_django_users()
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        queryset = User.objects.select_related('player_profile').annotate(
+        queryset = User.objects.select_related('player_profile').prefetch_related('groups').annotate(
             direct_permission_count=Count('user_permissions', distinct=True)
         )
         query = self.request.GET.get('q', '').strip()
@@ -112,7 +125,10 @@ class UserPermissionListView(UserPermissionAccessMixin, ListView):
         ]
         context['rows'] = [
             {'user': user, 'role': user_role(user),
-             'role_label': ROLE_LABELS.get(user_role(user), 'Gestión')}
+             'role_label': ROLE_LABELS.get(user_role(user), 'Gestión'),
+             'read_only_mode': any(
+                 group.name == MANAGEMENT_READ_ONLY_GROUP for group in user.groups.all()
+             )}
             for user in context['users']
         ]
         return context
@@ -188,6 +204,7 @@ class UserPermissionEditView(UserPermissionAccessMixin, TemplateView):
             'total_permissions': permissions.count(),
             'module_count': sum(len(section['modules']) for section in sections.values()),
             'can_edit': self.can_edit(),
+            'read_only_mode': is_management_read_only(self.target),
             'direct_count': len(direct_ids),
             'inherited_count': len(inherited),
             'groups': list(self.target.groups.values_list('name', flat=True)),
@@ -200,7 +217,11 @@ class UserPermissionEditView(UserPermissionAccessMixin, TemplateView):
             return redirect('user_permissions_edit', pk=self.target.pk)
 
         requested = {int(pk) for pk in request.POST.getlist('permissions') if pk.isdigit()}
-        allowed = self.allowed_permissions().filter(pk__in=requested)
+        read_only_mode = request.POST.get('management_read_only') == 'on'
+        allowed_permissions = self.allowed_permissions()
+        if read_only_mode:
+            allowed_permissions = allowed_permissions.filter(codename__startswith='view_')
+        allowed = allowed_permissions.filter(pk__in=requested)
         if len(allowed) != len(requested):
             messages.error(
                 request,
@@ -215,6 +236,11 @@ class UserPermissionEditView(UserPermissionAccessMixin, TemplateView):
                 pk__in=managed_permissions().values_list('pk', flat=True)
             )
             self.target.user_permissions.set(list(unmanaged) + list(allowed))
+            read_only_group, _ = Group.objects.get_or_create(name=MANAGEMENT_READ_ONLY_GROUP)
+            if read_only_mode:
+                self.target.groups.add(read_only_group)
+            else:
+                self.target.groups.remove(read_only_group)
         messages.success(
             request, f'Permisos de {self.target.get_username()} actualizados ({len(allowed)} directos).'
         )

@@ -28,6 +28,9 @@
   {% if role == 'supervisor' %}
     <p class="pm-note pm-note-warn">Supervisor: solo puede tener <strong>Sin acceso</strong> o <strong>Solo lectura</strong>.</p>
   {% endif %}
+  {% if read_only_mode %}
+    <p class="pm-note">Esta cuenta está limitada a permisos de consulta en Gestión; sus permisos de escritura se rechazan aunque provengan de otros grupos.</p>
+  {% endif %}
 
   <div class="pm-guide" aria-label="Qué significa cada nivel">
     <div><span class="pm-swatch" data-kind="none"></span><strong>Sin acceso</strong><small>No ve el módulo.</small></div>
@@ -38,6 +41,15 @@
   <form method="post" id="pm-form">
     {% csrf_token %}
     <div class="pm-toolbar">
+      <label class="pm-readonly-toggle">
+        <input type="checkbox" id="pm-read-only-mode" name="management_read_only" value="on"
+               {% if read_only_mode %}checked{% endif %}
+               {% if not can_edit or role == 'supervisor' %}disabled{% endif %}>
+        <span>
+          <strong>Limitar acceso a solo lectura</strong>
+          <small>Permite entrar a Gestión y consultar únicamente los módulos que habilites.</small>
+        </span>
+      </label>
       <div class="up-search-field">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <label class="visually-hidden" for="perm-search">Buscar módulo</label>
@@ -48,7 +60,7 @@
         <span>Aplicar a todos:</span>
         <button type="button" class="pm-bulk-btn" data-bulk="none">Sin acceso</button>
         <button type="button" class="pm-bulk-btn" data-bulk="read">Solo lectura</button>
-        {% if role != 'supervisor' %}<button type="button" class="pm-bulk-btn" data-bulk="full">Acceso total</button>{% endif %}
+        {% if role != 'supervisor' %}<button type="button" class="pm-bulk-btn" data-bulk="full" {% if read_only_mode %}hidden{% endif %}>Acceso total</button>{% endif %}
       </div>
       {% endif %}
     </div>
@@ -68,7 +80,7 @@
           <div class="pm-seg" role="radiogroup" aria-label="Nivel de acceso a {{ module.label }}">
             <label data-kind="none"><input type="radio" name="level-{{ module.model }}" value="none" {% if not can_edit %}disabled{% endif %}><span>Sin acceso</span></label>
             <label data-kind="read"><input type="radio" name="level-{{ module.model }}" value="read" {% if not can_edit %}disabled{% endif %}><span>Solo lectura</span></label>
-            <label data-kind="full"{% if not module.full_allowed %} title="No disponible para supervisores"{% endif %}><input type="radio" name="level-{{ module.model }}" value="full" {% if not can_edit or not module.full_allowed %}disabled{% endif %}><span>Acceso total</span></label>
+            <label data-kind="full"{% if not module.full_allowed %} title="No disponible para supervisores"{% endif %}><input type="radio" name="level-{{ module.model }}" value="full" data-base-disabled="{% if not can_edit or not module.full_allowed %}true{% else %}false{% endif %}" {% if not can_edit or not module.full_allowed or read_only_mode %}disabled{% endif %}><span>Acceso total</span></label>
           </div>
 
           <button type="button" class="pm-custom-toggle" data-custom-toggle aria-expanded="false">
@@ -80,8 +92,9 @@
             {% for cell in module.cells %}{% if cell %}
             <label class="pm-switch{% if not cell.allowed %} is-locked{% endif %}" title="{{ cell.help }}{% if cell.inherited_from %} · ya incluido por el grupo {{ cell.inherited_from }}{% endif %}{% if not cell.allowed %} · bloqueado (solo lectura){% endif %}">
               <input type="checkbox" class="switch switch-sm" role="switch" name="permissions" value="{{ cell.perm.pk }}" data-action="{{ cell.action }}"
+                     data-base-disabled="{% if not can_edit or not cell.allowed %}true{% else %}false{% endif %}"
                      {% if cell.checked %}checked{% endif %}
-                     {% if not can_edit or not cell.allowed %}disabled{% endif %}>
+                     {% if not can_edit or not cell.allowed or read_only_mode and cell.action != 'view' %}disabled{% endif %}>
               <span>{{ cell.short }}</span>
               {% if cell.inherited_from %}<span class="pm-inherited" aria-hidden="true"></span>{% endif %}
             </label>
@@ -113,10 +126,13 @@
   const empty = document.getElementById('pm-empty');
   const dirty = document.getElementById('pm-dirty');
   const summary = document.getElementById('pm-summary');
+  const readOnlyToggle = document.getElementById('pm-read-only-mode');
   const rows = [...form.querySelectorAll('[data-row]')];
   const sections = [...form.querySelectorAll('[data-section]')];
   const permBoxes = [...form.querySelectorAll('input[name="permissions"]')];
   const initial = permBoxes.map((box) => box.checked).join();
+  const initialReadOnly = readOnlyToggle?.checked ?? false;
+  const fullBulkButton = form.querySelector('[data-bulk="full"]');
   const normalize = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const boxes = (row) => [...row.querySelectorAll('input[name="permissions"]')];
 
@@ -160,9 +176,24 @@
     if (counts.custom) parts.push(`${counts.custom} personalizados`);
     parts.push(`${counts.none} sin acceso`);
     summary.textContent = parts.join(' · ');
-    dirty?.classList.toggle('hidden', permBoxes.map((box) => box.checked).join() === initial);
+    const permissionsChanged = permBoxes.map((box) => box.checked).join() !== initial;
+    dirty?.classList.toggle('hidden', !permissionsChanged && (readOnlyToggle?.checked ?? false) === initialReadOnly);
   }
 
+  readOnlyToggle?.addEventListener('change', () => {
+    const enabled = readOnlyToggle.checked;
+    permBoxes.forEach((box) => {
+      if (box.dataset.action !== 'view') {
+        box.disabled = box.dataset.baseDisabled === 'true' || enabled;
+        if (enabled) box.checked = false;
+      }
+    });
+    form.querySelectorAll('input[type="radio"][value="full"]').forEach((radio) => {
+      radio.disabled = radio.dataset.baseDisabled === 'true' || enabled;
+    });
+    if (fullBulkButton) fullBulkButton.hidden = enabled;
+    refresh();
+  });
   form.addEventListener('change', (event) => {
     const target = event.target;
     if (target.type === 'radio') setLevel(target.closest('[data-row]'), target.value);

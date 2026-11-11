@@ -1,10 +1,12 @@
 """Keep the main Player accounts and Django Auth identities in sync."""
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 ROLE_GROUPS = {'student': 'Alumno', 'teacher': 'Profesor', 'supervisor': 'Supervisor'}
 ROLE_LABELS = {'student': 'Alumno', 'teacher': 'Profesor', 'supervisor': 'Supervisor'}
+MANAGEMENT_READ_ONLY_GROUP = 'Gestión - Solo lectura'
 
 # Apps whose permissions can be managed from the management panel.
 MANAGED_PERMISSION_APPS = ('core', 'auth')
@@ -19,6 +21,33 @@ def managed_permissions():
 def read_only_permissions():
     """Permissions a supervisor may hold: only `view_*` (lectura)."""
     return managed_permissions().filter(codename__startswith='view_')
+
+
+def is_management_read_only(user):
+    if not user.is_authenticated or user.is_superuser:
+        return False
+    if user.groups.filter(name=MANAGEMENT_READ_ONLY_GROUP).exists():
+        return True
+    try:
+        return user.player_profile.role == 'supervisor'
+    except ObjectDoesNotExist:
+        return False
+
+
+def has_explicit_management_view_permission(user, permission):
+    app_label, codename = permission.split('.', 1)
+    return user.user_permissions.filter(
+        content_type__app_label=app_label, codename=codename
+    ).exists()
+
+
+def has_management_permission(user, permission):
+    if is_management_read_only(user):
+        if permission.rsplit('.', 1)[-1].split('_', 1)[0] != 'view':
+            return False
+        if user.groups.filter(name=MANAGEMENT_READ_ONLY_GROUP).exists():
+            return has_explicit_management_view_permission(user, permission)
+    return user.has_perm(permission)
 
 
 def ensure_role_groups():

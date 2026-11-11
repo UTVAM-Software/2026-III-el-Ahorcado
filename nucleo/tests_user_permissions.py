@@ -3,8 +3,13 @@ from django.contrib.auth.models import Group, Permission
 from django.test import TestCase
 from django.urls import reverse
 
-from nucleo.auth_integration import ensure_role_groups, sync_player_to_django_user
-from nucleo.models import Player
+from ahorcado.management_forms import UserManagementForm
+from nucleo.auth_integration import (
+    MANAGEMENT_READ_ONLY_GROUP,
+    ensure_role_groups,
+    sync_player_to_django_user,
+)
+from nucleo.models import Player, Word
 
 User = get_user_model()
 
@@ -79,6 +84,34 @@ class UserPermissionsPanelTests(TestCase):
         # Read-only role cannot use the write views of the CRUD.
         self.assertNotEqual(self.client.get(reverse('manage_words_create')).status_code, 200)
 
+    def test_configurable_read_only_access_blocks_writes_and_unselected_modules(self):
+        writer_group = Group.objects.create(name='Escritores de palabras')
+        writer_group.permissions.add(Permission.objects.get(codename='add_word'))
+        self.teacher.groups.add(writer_group)
+
+        self.client.force_login(self.admin)
+        edit_url = reverse('user_permissions_edit', args=[self.teacher.pk])
+        response = self.client.post(edit_url, {
+            'permissions': [self.view_word.pk],
+            'management_read_only': 'on',
+        })
+        self.assertRedirects(response, edit_url)
+        self.assertTrue(self.teacher.groups.filter(name=MANAGEMENT_READ_ONLY_GROUP).exists())
+        self.assertTrue(self.teacher.has_perm('core.add_word'))
+
+        self.client.force_login(self.teacher)
+        list_response = self.client.get(reverse('manage_words_list'))
+        self.assertEqual(list_response.status_code, 200)
+        self.assertContains(list_response, '>Ver</a>')
+        self.assertNotContains(list_response, '>Editar</a>')
+        self.assertNotContains(list_response, '>Eliminar</a>')
+        self.assertNotContains(list_response, 'Crear palabra')
+        self.assertEqual(self.client.get(reverse('manage_players_list')).status_code, 403)
+        word_count = Word.objects.count()
+        response = self.client.post(reverse('manage_words_create'), {})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Word.objects.count(), word_count)
+
     def test_student_without_permissions_is_redirected(self):
         self.client.force_login(self.student)
         response = self.client.get(reverse('user_permissions_list'))
@@ -99,3 +132,73 @@ class UserPermissionsPanelTests(TestCase):
         }, content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Player.objects.filter(name='nuevo_sup').exists())
+
+    def test_superuser_can_create_superuser_from_management(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('manage_users_create'), {
+            'username': 'new_admin',
+            'email': 'new-admin@example.com',
+            'first_name': 'New',
+            'last_name': 'Admin',
+            'password': 'Strong-River-291-Cloud',
+            'player_role': 'teacher',
+            'is_active': 'on',
+            'is_superuser': 'on',
+        })
+        self.assertRedirects(response, reverse('manage_users_list'))
+        new_admin = User.objects.get(username='new_admin')
+        self.assertTrue(new_admin.is_superuser)
+        self.assertTrue(new_admin.is_staff)
+        self.assertTrue(new_admin.check_password('Strong-River-291-Cloud'))
+        self.assertTrue(Player.objects.filter(django_user=new_admin, role='teacher').exists())
+
+    def test_superuser_can_edit_existing_superuser(self):
+        target = User.objects.create_superuser('other_admin', 'other-admin@example.com', 'Original-Pass-12345')
+        self.client.force_login(self.admin)
+        url = reverse('manage_users_update', args=[target.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Superusuario')
+        response = self.client.post(url, {
+            'username': target.username,
+            'email': 'updated-admin@example.com',
+            'first_name': 'Updated',
+            'last_name': 'Admin',
+            'is_active': 'on',
+            'is_staff': 'on',
+            'is_superuser': 'on',
+            'player_role': 'teacher',
+        })
+        self.assertRedirects(response, reverse('manage_users_list'))
+        target.refresh_from_db()
+        self.assertEqual(target.email, 'updated-admin@example.com')
+        self.assertTrue(target.is_superuser)
+        self.assertTrue(target.is_staff)
+
+    def test_non_superuser_cannot_edit_or_escalate_to_superuser(self):
+        editor = User.objects.create_user('editor', password='Editor-Pass-12345')
+        editor.user_permissions.add(
+            Permission.objects.get(codename='view_user'),
+            Permission.objects.get(codename='add_user'),
+            Permission.objects.get(codename='change_user'),
+        )
+        self.client.force_login(editor)
+        target = User.objects.create_superuser('protected_admin', 'protected-admin@example.com', 'Original-Pass-12345')
+        self.assertEqual(
+            self.client.get(reverse('manage_users_update', args=[target.pk])).status_code,
+            404,
+        )
+
+        form = UserManagementForm(actor=editor)
+        self.assertNotIn('is_superuser', form.fields)
+        response = self.client.post(reverse('manage_users_create'), {
+            'username': 'ordinary_user',
+            'email': 'ordinary@example.com',
+            'password': 'Strong-River-291-Cloud',
+            'player_grade': '1',
+            'player_group': 'A',
+            'is_superuser': 'on',
+        })
+        self.assertRedirects(response, reverse('manage_users_list'))
+        ordinary_user = User.objects.get(username='ordinary_user')
+        self.assertFalse(ordinary_user.is_superuser)

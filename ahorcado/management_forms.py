@@ -30,7 +30,7 @@ class UserManagementForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name', 'is_active',
-                  'is_staff', 'groups', 'user_permissions')
+                  'is_staff', 'is_superuser', 'groups', 'user_permissions')
 
     def __init__(self, *args, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,8 +44,14 @@ class UserManagementForm(forms.ModelForm):
             self.initial.setdefault('player_group', self.player_profile.group_name)
         else:
             self.initial.setdefault('player_role', 'student')
-        if not actor or not actor.is_superuser:
-            for field_name in ('is_staff', 'groups', 'user_permissions', 'player_role'):
+        if actor and actor.is_superuser:
+            self.fields['is_superuser'].label = 'Superusuario'
+            self.fields['is_superuser'].help_text = (
+                'Concede acceso completo a Gestión y todos los permisos del sistema.'
+            )
+            self.fields['is_staff'].label = 'Acceso a Gestión'
+        else:
+            for field_name in ('is_staff', 'is_superuser', 'groups', 'user_permissions', 'player_role'):
                 self.fields.pop(field_name, None)
 
     def clean_username(self):
@@ -74,6 +80,8 @@ class UserManagementForm(forms.ModelForm):
                 self.add_error('player_grade', 'El grado es obligatorio para alumnos.')
             if not cleaned.get('player_group'):
                 self.add_error('player_group', 'El grupo escolar es obligatorio para alumnos.')
+        if cleaned.get('is_superuser'):
+            cleaned['is_staff'] = True
         return cleaned
 
     def clean_password(self):

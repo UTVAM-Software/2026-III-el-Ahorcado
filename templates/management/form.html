@@ -9,7 +9,11 @@
   {% endif %}
   {% if form %}<form method="post" class="auth-form">{% csrf_token %}
     {% if form.non_field_errors %}<div class="alerta alerta-error">{{ form.non_field_errors }}</div>{% endif %}
-    {% for field in form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}{% for error in field.errors %}<p class="errorlist">{{ error }}</p>{% endfor %}</div>{% endfor %}
+    {% for field in form %}<div class="management-form-field{% if field.field.widget.input_type == 'checkbox' %} management-checkbox-field{% endif %}">
+      {% if field.field.widget.input_type == 'checkbox' %}<label class="inline-check" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>
+      {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+      {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}{% for error in field.errors %}<p class="errorlist">{{ error }}</p>{% endfor %}
+    </div>{% endfor %}
     <div class="management-actions">
       {% if mode == 'delete' %}<p>¿Confirmas que deseas eliminar este registro?</p><button type="submit">Eliminar</button>
       {% elif mode != 'detail' %}<button type="submit">Guardar</button>{% endif %}

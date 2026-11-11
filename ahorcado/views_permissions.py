@@ -13,12 +13,24 @@ from django.views.generic import (
 )
 
 from ahorcado.forms import PermissionFilterForm, PermissionForm
+from nucleo.auth_integration import has_management_permission, is_management_read_only
 
 
 class StaffOrPermissionRequiredMixin(LoginRequiredMixin, PermissionRequiredMixin):
     """Requiere sesión Django y el permiso asignado (los superusuarios tienen acceso)."""
     login_url = '/gestion/login/'
     raise_exception = False
+
+    def has_permission(self):
+        return all(
+            has_management_permission(self.request.user, permission)
+            for permission in self.get_permission_required()
+        )
+
+    def handle_no_permission(self):
+        if is_management_read_only(self.request.user):
+            self.raise_exception = True
+        return super().handle_no_permission()
 
 
 from django.db import DatabaseError, OperationalError

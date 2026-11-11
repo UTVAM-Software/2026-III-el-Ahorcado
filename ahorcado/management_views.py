@@ -1,13 +1,19 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import Group, Permission
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
 from ahorcado.forms import PermissionForm
 from ahorcado.management_forms import GroupManagementForm, PlayerManagementForm, UserManagementForm
-from nucleo.auth_integration import ROLE_LABELS, sync_all_players_to_django_users
+from nucleo.auth_integration import (
+    ROLE_LABELS,
+    MANAGEMENT_READ_ONLY_GROUP,
+    has_management_permission,
+    is_management_read_only,
+    sync_all_players_to_django_users,
+)
 from nucleo import models as core_models
 
 User = get_user_model()
@@ -17,6 +23,17 @@ class ProtectedManagementView(LoginRequiredMixin, PermissionRequiredMixin):
     login_url = '/gestion/login/'
     raise_exception = False
 
+    def has_permission(self):
+        return all(
+            has_management_permission(self.request.user, permission)
+            for permission in self.get_permission_required()
+        )
+
+    def handle_no_permission(self):
+        if is_management_read_only(self.request.user):
+            self.raise_exception = True
+        return super().handle_no_permission()
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         if self.form_class is UserManagementForm:
@@ -25,6 +42,15 @@ class ProtectedManagementView(LoginRequiredMixin, PermissionRequiredMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        app_label = getattr(self, 'management_app_label', None)
+        model_name = getattr(self, 'management_model_name', None)
+        if app_label and model_name:
+            context.update({
+                f'can_{action}': has_management_permission(
+                    self.request.user, f'{app_label}.{action}_{model_name}'
+                )
+                for action in ('view', 'add', 'change', 'delete')
+            })
         if getattr(self, 'object', None) is not None:
             context['object_fields'] = [
                 (field.verbose_name, getattr(self.object, field.name))
@@ -51,9 +77,12 @@ class ManagementHomeView(LoginRequiredMixin, TemplateView):
             {'slug': slug, 'label': label, 'app_label': app_label, 'model_name': model_name,
              'list_url': resource_url_name(slug, 'list')}
             for slug, label, model, app_label, model_name, form_class in RESOURCE_SPECS
-            if self.request.user.has_perm(f'{app_label}.view_{model_name}')
+            if self.has_management_access(f'{app_label}.view_{model_name}')
         ]
         return context
+
+    def has_management_access(self, permission):
+        return has_management_permission(self.request.user, permission)
 
 
 class ManagementListView(ListView):
@@ -72,10 +101,13 @@ class ManagementListView(ListView):
             profiles = {player.django_user_id: player for player in core_models.Player.objects.filter(
                 django_user_id__in=[row.pk for row in context['object_list']]
             )}
-            context['extra_column_label'] = 'Rol principal'
+            context['extra_column_labels'] = ['Rol principal', 'Acceso']
         context['rows'] = [
             (row, [getattr(row, field.name) for field in context['fields']] + (
-                [role_names.get(profiles[row.pk].role, '—') if row.pk in profiles else 'Cuenta de gestión']
+                [
+                    role_names.get(profiles[row.pk].role, '—') if row.pk in profiles else 'Cuenta de gestión',
+                    'Superusuario' if row.is_superuser else 'Usuario estándar',
+                ]
                 if self.model is User else []
             ))
             for row in context['object_list']
@@ -85,8 +117,17 @@ class ManagementListView(ListView):
 
 class ManagementUserListView(ManagementListView):
     def get_queryset(self):
-        sync_all_players_to_django_users()
+        if not is_management_read_only(self.request.user):
+            sync_all_players_to_django_users()
         return super().get_queryset()
+
+
+class ManagementUserUpdateView(UpdateView):
+    def get_object(self, queryset=None):
+        user = super().get_object(queryset)
+        if user.is_superuser and not self.request.user.is_superuser:
+            raise Http404
+        return user
 
 
 class ManagementPlayerDeleteView(DeleteView):
@@ -143,6 +184,8 @@ def build_resource_patterns():
                     'list_url': resource_url_name(slug, 'list'),
                     'read_only': slug in READ_ONLY_RESOURCES,
                 },
+                'management_app_label': app_label,
+                'management_model_name': model_name,
             }
             if action in ('create', 'update'):
                 if form_class:
@@ -154,6 +197,8 @@ def build_resource_patterns():
             parent_view = parent
             if model is core_models.Player and action == 'delete':
                 parent_view = ManagementPlayerDeleteView
+            elif model is User and action == 'update':
+                parent_view = ManagementUserUpdateView
             view_class = type(f'{base_name.title().replace("_", "")} {action.title()} View',
                               (ProtectedManagementView, parent_view), attrs)
             patterns.append((path, view_class.as_view(), resource_url_name(slug, action)))

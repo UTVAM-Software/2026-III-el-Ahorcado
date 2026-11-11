@@ -29,7 +29,7 @@
     {% if query %}<a class="secondary-button" href="?{% if current_role %}rol={{ current_role }}{% endif %}">Limpiar</a>{% endif %}
   </form>
 
-  <div class="tabla-contenedor">
+  <div class="tabla-contenedor" role="region" aria-label="Tabla de usuarios y permisos; desplazamiento horizontal disponible" tabindex="0">
     <table class="crud-table up-table">
       <thead>
         <tr><th>Usuario</th><th>Rol</th><th>Grupo escolar</th><th>Permisos directos</th><th>Estado</th><th><span class="visually-hidden">Acciones</span></th></tr>
@@ -51,7 +51,7 @@
             {% else %}<span class="up-role up-role-{{ row.role|default:'gestion' }}">{{ row.role_label }}</span>{% endif %}
           </td>
           <td>{% if row.role == 'student' %}{{ row.user.player_profile.grade }} {{ row.user.player_profile.group_name }}{% else %}—{% endif %}</td>
-          <td>{% if row.user.is_superuser %}Todos{% else %}{{ row.user.direct_permission_count }}{% endif %}</td>
+          <td>{% if row.user.is_superuser %}Todos{% else %}{% if row.read_only_mode %}<span class="up-role up-role-supervisor">Solo lectura</span> {% endif %}{{ row.user.direct_permission_count }}{% endif %}</td>
           <td>{% if row.user.is_active %}<span class="up-status up-status-on">Activo</span>{% else %}<span class="up-status">Inactivo</span>{% endif %}</td>
           <td class="acciones-fila"><a class="btn-tabla btn-tabla-editar" href="{% url 'user_permissions_edit' row.user.pk %}">{% if request.user.is_superuser and not row.user.is_superuser %}Asignar permisos{% else %}Ver permisos{% endif %}</a></td>
         </tr>
