@@ -131,3 +131,16 @@ class DailyWordAnswer(models.Model):
 
     def __str__(self):
         return f'{self.player.name}: {self.answer_letter} en {self.daily_word.word.word}'
+
+
+def find_player_by_credential(credential, queryset=None):
+    """Find a player by username or email, ignoring case (exact username match wins)."""
+    from django.db.models import Q
+
+    queryset = queryset if queryset is not None else Player.objects.all()
+    credential = (credential or '').strip()
+    if not credential:
+        return None
+    return queryset.filter(name=credential).first() or queryset.filter(
+        Q(name__iexact=credential) | Q(email__iexact=credential)
+    ).order_by('pk').first()
