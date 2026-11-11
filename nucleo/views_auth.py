@@ -16,14 +16,13 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
-from django.db.models import Q
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
 from .api import body, endpoint, error, player_data, token_for
 from .auth_integration import sync_player_to_django_user
-from .models import PasswordResetToken, Player
+from .models import PasswordResetToken, Player, find_player_by_credential
 
 logger = getLogger(__name__)
 
@@ -93,7 +92,40 @@ def password_reset_rate_limited(request, action, limit):
 
 @endpoint(['POST'])
 def register(request):
-    return error('El registro de cuentas se realiza desde el formulario con Google.', 410)
+    data = body(request)
+    name = str(data.get('name') or '').strip()[:30]
+    first_name = str(data.get('first_name') or '').strip()[:50]
+    last_name = str(data.get('last_name') or '').strip()[:50]
+    email = str(data.get('email') or '').strip().lower()
+    role = str(data.get('role') or '').strip().lower()
+    password = str(data.get('password') or '')
+    grade = str(data.get('grade') or '').strip()
+    group_name = str(data.get('group_name') or '').strip()
+    if not all((name, first_name, last_name, email, password)):
+        return error('Todos los campos del formulario son obligatorios.')
+    if role not in ('student', 'teacher'):
+        return error('Selecciona explícitamente si la cuenta será Alumno o Profesor.')
+    if role == 'student' and (not grade or not group_name):
+        return error('Los alumnos deben indicar su grado y grupo.')
+    if len(grade) > 30 or len(group_name) > 20:
+        return error('El grado debe tener hasta 30 caracteres y el grupo hasta 20.')
+    if len(email) > 100:
+        return error('El correo electrónico no puede superar los 100 caracteres.')
+    try:
+        validate_email(email)
+    except ValidationError:
+        return error('El formato del correo electrónico no es válido.')
+    if not strong_password(password):
+        return error('La contraseña debe tener entre 12 y 72 bytes e incluir mayúsculas, minúsculas y números.')
+    try:
+        player = Player.objects.create(name=name, first_name=first_name, last_name=last_name,
+                                       email=email, role=role,
+                                       grade=grade.upper(), group_name=group_name.upper(),
+                                       password=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode())
+        sync_player_to_django_user(player, raw_password=password)
+    except IntegrityError:
+        return error('El nombre de usuario o el correo electrónico ya están en uso.')
+    return JsonResponse({'token': token_for(player), 'user': player_data(player)})
 
 
 def verify_supabase_access_token(access_token):
@@ -397,7 +429,7 @@ def login(request):
     ip_key = f'login:{request.META.get("REMOTE_ADDR", "unknown")}'
     if rate_limited(request):
         return error('Demasiados intentos. Intenta nuevamente en unos minutos.', 429)
-    player = Player.objects.filter(Q(name=credential) | Q(email=credential.lower())).first()
+    player = find_player_by_credential(credential)
     if not player or not player.is_active:
         attempts = cache.get(ip_key, 0) + 1
         cache.set(ip_key, attempts, 300)

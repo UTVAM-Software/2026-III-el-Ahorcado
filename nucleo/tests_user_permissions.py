@@ -125,12 +125,12 @@ class UserPermissionsPanelTests(TestCase):
         self.assertEqual(list(self.teacher.user_permissions.values_list('codename', flat=True)), ['view_word'])
         self.assertEqual(list(self.teacher.groups.values_list('name', flat=True)), ['Supervisor'])
 
-    def test_public_registration_endpoint_is_disabled(self):
+    def test_public_registration_rejects_supervisor_role(self):
         response = self.client.post('/api/auth/register', {
             'name': 'nuevo_sup', 'first_name': 'Nuevo', 'last_name': 'Sup', 'email': 'nuevo@example.com',
             'password': 'Password-Segura-123', 'role': 'supervisor',
         }, content_type='application/json')
-        self.assertEqual(response.status_code, 410)
+        self.assertEqual(response.status_code, 400)
         self.assertFalse(Player.objects.filter(name='nuevo_sup').exists())
 
     def test_superuser_can_create_superuser_from_management(self):
@@ -202,3 +202,32 @@ class UserPermissionsPanelTests(TestCase):
         self.assertRedirects(response, reverse('manage_users_list'))
         ordinary_user = User.objects.get(username='ordinary_user')
         self.assertFalse(ordinary_user.is_superuser)
+
+
+class CaseInsensitiveLoginTests(TestCase):
+    def setUp(self):
+        import bcrypt
+        self.player = Player.objects.create(
+            name='joshadmin', first_name='Josh', last_name='Admin', email='josh@example.com', role='teacher',
+            password=bcrypt.hashpw(b'Clave-Segura-123', bcrypt.gensalt()).decode(),
+        )
+
+    def test_game_login_ignores_username_case(self):
+        for credential in ('joshadmin', 'Joshadmin', 'JOSHADMIN', 'Josh@Example.com'):
+            response = self.client.post('/api/auth/login', {'credential': credential, 'password': 'Clave-Segura-123'},
+                                        content_type='application/json')
+            self.assertEqual(response.status_code, 200, credential)
+
+    def test_management_login_ignores_username_case(self):
+        response = self.client.post('/gestion/login/', {'username': 'Joshadmin', 'password': 'Clave-Segura-123'})
+        self.assertRedirects(response, '/gestion/', fetch_redirect_response=False)
+
+    def test_exact_username_wins_over_case_variant(self):
+        import bcrypt
+        other = Player.objects.create(
+            name='JoshAdmin', first_name='Otro', last_name='Usuario', email='otro@example.com', role='student',
+            grade='1', group_name='A', password=bcrypt.hashpw(b'Otra-Clave-123', bcrypt.gensalt()).decode(),
+        )
+        response = self.client.post('/api/auth/login', {'credential': 'JoshAdmin', 'password': 'Otra-Clave-123'},
+                                    content_type='application/json')
+        self.assertEqual(response.json()['user']['id'], other.pk)

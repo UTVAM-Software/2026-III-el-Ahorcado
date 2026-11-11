@@ -1,6 +1,6 @@
 import { state, setState } from './components/state.mjs';
 import { setMessage, showPanel } from './components/ui.mjs';
-import { deleteMyAccount, loadLeaderboard as fetchLeaderboard, loginUser } from './components/api.mjs';
+import { deleteMyAccount, loadLeaderboard as fetchLeaderboard, registerUser, loginUser } from './components/api.mjs';
 import { saveSession, loadSession, clearSession as clearStoredSession } from './components/session.mjs';
 import {
   getGoogleRegistrationDraft,
@@ -24,6 +24,7 @@ const elements = {
   rankingList: document.getElementById('ranking-list'),
   registerForm: document.getElementById('register-form'),
   registerChoice: document.getElementById('register-choice'),
+  registerEmailStartBtn: document.getElementById('register-email-start'),
   registerTitle: document.getElementById('register-title'),
   registerDescription: document.getElementById('register-description'),
   registerUsername: document.getElementById('register-username'),
@@ -325,6 +326,17 @@ if (elements.googleLoginBtn) {
 }
 
 if (elements.registerForm) {
+  elements.registerEmailStartBtn?.addEventListener('click', () => {
+    elements.registerChoice.classList.add('hidden');
+    elements.registerForm.classList.remove('hidden');
+    elements.registerDescription.textContent = 'Completa el formulario para crear tu cuenta.';
+    elements.registerPasswordConfirmation.required = true;
+    elements.googlePasswordConfirmation.classList.remove('hidden');
+    elements.googlePasswordRequirements.textContent = 'De 12 a 72 caracteres, con mayúsculas, minúsculas y números.';
+    elements.googlePasswordRequirements.classList.remove('hidden');
+    elements.registerUsername.focus();
+  });
+
   let googleRegistrationProfile = null;
   try {
     if (new URLSearchParams(window.location.search).get('google') === 'complete') {
@@ -354,6 +366,7 @@ if (elements.registerForm) {
         elements.googlePasswordRequirements.classList.remove('hidden');
         elements.registerFormBtn.textContent = 'Completar registro y entrar';
         elements.googleRegisterRetryBtn.textContent = 'Volver a autorizar con Google';
+        elements.googleRegisterRetryBtn.classList.remove('hidden');
       }
     }
   } catch (error) {
@@ -391,15 +404,15 @@ if (elements.registerForm) {
 
   elements.registerEmail?.addEventListener('input', validateRegistrationEmail);
   elements.registerEmail?.addEventListener('blur', validateRegistrationEmail);
+  elements.registerPasswordConfirmation?.addEventListener('input', () => {
+    elements.registerPasswordConfirmation.setCustomValidity('');
+  });
+
   elements.registerForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     validateRegistrationEmail();
     if (!elements.registerForm.checkValidity()) {
       elements.registerForm.reportValidity();
-      return;
-    }
-    if (!googleRegistrationProfile) {
-      setMessage(elements.registerMessage, 'Autoriza tu cuenta de Google para completar el registro.');
       return;
     }
 
@@ -418,20 +431,33 @@ if (elements.registerForm) {
       return;
     }
     elements.registerPasswordConfirmation.setCustomValidity('');
-    payload.password = elements.registerPassword.value;
+
+    let response;
     let data;
-    try {
-      data = await registerWithGoogle(payload);
-    } catch (error) {
-      setMessage(elements.registerMessage, error.message || 'No se pudo completar el registro con Google.');
-      return;
+    if (googleRegistrationProfile) {
+      payload.password = elements.registerPassword.value;
+      try {
+        data = await registerWithGoogle(payload);
+        response = { ok: true };
+      } catch (error) {
+        setMessage(elements.registerMessage, error.message || 'No se pudo completar el registro con Google.');
+        return;
+      }
+    } else {
+      payload.email = elements.registerEmail.value.trim().toLowerCase();
+      payload.password = elements.registerPassword.value;
+      ({ response, data } = await registerUser(payload));
     }
-    if (data.user?.role !== payload.role) {
-      setMessage(elements.registerMessage, 'El rol guardado no coincide con el rol seleccionado. Inicia sesión de nuevo o contacta al administrador.');
-      return;
+    if (response.ok && data.token) {
+      if (data.user?.role !== payload.role) {
+        setMessage(elements.registerMessage, 'El rol guardado no coincide con el rol seleccionado. Inicia sesión de nuevo o contacta al administrador.');
+        return;
+      }
+      saveSession(data.token, data.user);
+      window.location.href = '/';
+    } else {
+      setMessage(elements.registerMessage, data.error || 'Error registrando usuario');
     }
-    saveSession(data.token, data.user);
-    window.location.href = '/';
   });
 
   const startGoogleRegistration = async () => {
