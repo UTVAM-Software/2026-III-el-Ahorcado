@@ -135,6 +135,12 @@ class UserPermissionsPanelTests(TestCase):
 
     def test_superuser_can_create_superuser_from_management(self):
         self.client.force_login(self.admin)
+        list_response = self.client.get(reverse('manage_users_list'))
+        self.assertContains(list_response, 'Crear usuarios django')
+        self.assertContains(list_response, 'Crear superusuario')
+        form_response = self.client.get(f"{reverse('manage_users_create')}?superuser=1")
+        self.assertEqual(form_response.status_code, 200)
+        self.assertRegex(form_response.content.decode(), r'name="is_superuser"[^>]*checked')
         response = self.client.post(reverse('manage_users_create'), {
             'username': 'new_admin',
             'email': 'new-admin@example.com',

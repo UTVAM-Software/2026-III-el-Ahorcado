@@ -509,6 +509,18 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(assignments[0].word_ids, assignments[1].word_ids)
         self.assertEqual(set(assignments[0].word_ids), {word.id for word in words})
 
+    def test_teacher_word_creation_rejects_words_over_database_limit(self):
+        registration = self.register(name='word_limit_teacher', role='teacher')
+        response = self.client.post(
+            '/api/words',
+            {'word': 'a' * 256, 'difficulty': 'easy'},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f"Bearer {registration.json()['token']}",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Word.objects.filter(word='a' * 256).exists())
+
     def test_prepare_game_matches_theme_without_case_sensitivity(self):
         teacher_response = self.register(
             name='animalteacher',

@@ -1,5 +1,4 @@
 """Esquema inicial compatible con las tablas del servidor Express."""
-import django.contrib.postgres.fields
 import django.db.models.deletion
 import django.utils.timezone
 from django.db import migrations, models
@@ -22,7 +21,7 @@ class Migration(migrations.Migration):
         ], options={'db_table': 'players'}),
         migrations.CreateModel(name='Word', fields=[
             ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-            ('word', models.TextField(unique=True)),
+            ('word', models.CharField(max_length=255, unique=True)),
             ('difficulty', models.CharField(max_length=10, choices=[('easy', 'Fácil'), ('medium', 'Media'), ('hard', 'Difícil')])),
             ('theme', models.CharField(default='General', max_length=50)),
             ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
@@ -32,7 +31,7 @@ class Migration(migrations.Migration):
             ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
             ('theme', models.CharField(default='General', max_length=50)),
             ('difficulty', models.CharField(max_length=10, choices=[('easy', 'Fácil'), ('medium', 'Media'), ('hard', 'Difícil')])),
-            ('word_ids', django.contrib.postgres.fields.ArrayField(base_field=models.IntegerField(), default=list, size=None)),
+            ('word_ids', models.JSONField(default=list)),
             ('current_index', models.IntegerField(default=0)),
             ('status', models.CharField(default='pending', max_length=12)),
             ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
@@ -50,8 +49,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(name='Game', fields=[
             ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
             ('difficulty', models.CharField(max_length=10, choices=[('easy', 'Fácil'), ('medium', 'Media'), ('hard', 'Difícil')])),
-            ('guessed', django.contrib.postgres.fields.ArrayField(base_field=models.TextField(), default=list, size=None)),
-            ('wrong', django.contrib.postgres.fields.ArrayField(base_field=models.TextField(), default=list, size=None)),
+            ('guessed', models.JSONField(default=list)),
+            ('wrong', models.JSONField(default=list)),
             ('wrong_attempts', models.IntegerField(default=0)),
             ('attempts', models.IntegerField(default=0)),
             ('status', models.CharField(default='playing', max_length=10)),

@@ -9,7 +9,7 @@ from django.http import JsonResponse
 
 from .ai import generate as generate_content
 from .api import body, endpoint, error, id_list, integer, word_data
-from .models import DailyWord, Word
+from .models import DailyWord, Word, WORD_MAX_LENGTH
 
 DIFFICULTIES = ('easy', 'medium', 'hard')
 logger = getLogger(__name__)
@@ -48,6 +48,8 @@ def generated_words(theme, difficulty, count, teacher):
     results = []
     for value in list(dict.fromkeys(sanitize_word(item) for item in raw))[:count]:
         if value:
+            if len(value) > WORD_MAX_LENGTH:
+                raise ValueError(f'Cada palabra debe tener como máximo {WORD_MAX_LENGTH} caracteres.')
             word, _ = Word.objects.update_or_create(word=value, defaults={'difficulty': difficulty, 'theme': theme, 'created_by': teacher})
             results.append(word_data(word))
     return results, model
@@ -64,6 +66,8 @@ def words(request):
     difficulty = data.get('difficulty')
     if not word or not difficulty:
         return error('La palabra y la dificultad son obligatorias.')
+    if len(word) > WORD_MAX_LENGTH:
+        return error(f'La palabra no puede superar {WORD_MAX_LENGTH} caracteres.')
     if difficulty not in DIFFICULTIES:
         return error('La dificultad no es válida.')
     assign_daily = data.get('assignDaily') is True

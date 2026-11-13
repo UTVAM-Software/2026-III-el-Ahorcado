@@ -1,8 +1,9 @@
-import os
+import json
 import mimetypes
+import os
 
 from pathlib import Path
-from urllib.parse import urlparse, unquote, quote
+from urllib.parse import parse_qs, unquote, urlparse
 from dotenv import dotenv_values, load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -77,50 +78,95 @@ AUTHENTICATION_BACKENDS = [
 ]
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
-SUPABASE_PROJECT_REF = 'vhsqyvppeljmbpizzyjp'
+
+def setting(name, default=''):
+    return os.getenv(name) or LOCAL_DOTENV.get(name) or default
+
+
+database_engine_setting = setting('DB_ENGINE').strip()
+database_url = setting('DATABASE_URL').strip('"\' \n\r')
+if database_url and not database_engine_setting:
+    parsed = urlparse(database_url)
+    scheme = parsed.scheme.lower()
+    database_backends = {
+        'postgres': 'django.db.backends.postgresql',
+        'postgresql': 'django.db.backends.postgresql',
+        'mysql': 'django.db.backends.mysql',
+        'oracle': 'django.db.backends.oracle',
+    }
+
+    if scheme == 'sqlite':
+        database_name = unquote(parsed.path)
+        if parsed.netloc:
+            database_name = f'{parsed.netloc}{database_name}'
+        elif database_name.startswith('//'):
+            database_name = database_name[1:]
+        elif database_name.startswith('/'):
+            database_name = database_name[1:]
+        if database_name != ':memory:' and not Path(database_name).is_absolute():
+            database_name = str(BASE_DIR / database_name)
+        DATABASES = {'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': database_name or str(BASE_DIR / 'db.sqlite3'),
+        }}
+    elif scheme in database_backends:
+        database = {
+            'ENGINE': database_backends[scheme],
+            'NAME': unquote(parsed.path.lstrip('/')),
+            'USER': unquote(parsed.username or ''),
+            'PASSWORD': unquote(parsed.password or ''),
+            'HOST': parsed.hostname or '',
+            'PORT': parsed.port or '',
+        }
+        if scheme in ('postgres', 'postgresql'):
+            sslmode = parse_qs(parsed.query).get('sslmode', [None])[0]
+            if sslmode:
+                database['OPTIONS'] = {'sslmode': sslmode}
+            elif os.getenv('VERCEL') or 'supabase' in (parsed.hostname or ''):
+                database['OPTIONS'] = {'sslmode': 'require'}
+        DATABASES = {'default': database}
+    else:
+        raise ValueError(f'Esquema de DATABASE_URL no compatible: {scheme or "(vacío)"}')
+else:
+    engine_aliases = {
+        'sqlite': 'sqlite3',
+        'postgres': 'postgresql',
+        'postgresql': 'postgresql',
+        'mysql': 'mysql',
+        'oracle': 'oracle',
+    }
+    configured_engine = database_engine_setting.lower()
+    database_engine = engine_aliases.get(configured_engine, configured_engine)
+    if not database_engine:
+        database_engine = 'django.db.backends.sqlite3'
+    elif '.' not in database_engine:
+        database_engine = f'django.db.backends.{database_engine}'
+    database_name = setting('DB_NAME', 'db.sqlite3' if database_engine == 'django.db.backends.sqlite3' else '')
+    if not database_name:
+        raise RuntimeError('Configura DB_NAME para el motor de base de datos seleccionado.')
+    if database_engine == 'django.db.backends.sqlite3' and database_name != ':memory:':
+        if not Path(database_name).is_absolute():
+            database_name = str(BASE_DIR / database_name)
+
+    database = {
+        'ENGINE': database_engine,
+        'NAME': database_name,
+        'USER': setting('DB_USER'),
+        'PASSWORD': setting('DB_PASSWORD'),
+        'HOST': setting('DB_HOST'),
+        'PORT': setting('DB_PORT'),
+    }
+    database_options = json.loads(setting('DB_OPTIONS', '{}'))
+    if not isinstance(database_options, dict):
+        raise ValueError('DB_OPTIONS debe contener un objeto JSON.')
+    if database_options:
+        database['OPTIONS'] = database_options
+    DATABASES = {'default': database}
+
 SUPABASE_URL = (
-    os.getenv('SUPABASE_URL') or LOCAL_DOTENV.get('SUPABASE_URL')
-    or f'https://{SUPABASE_PROJECT_REF}.supabase.co'
+    setting('SUPABASE_URL') or 'https://vhsqyvppeljmbpizzyjp.supabase.co'
 ).strip().rstrip('/')
-SUPABASE_KEY = (os.getenv('SUPABASE_KEY') or LOCAL_DOTENV.get('SUPABASE_KEY') or '').strip()
-SUPABASE_DB_PASSWORD = (
-    os.getenv('SUPABASE_DB_PASSWORD') or LOCAL_DOTENV.get('SUPABASE_DB_PASSWORD') or ''
-)
-
-DEFAULT_DB_URL = (
-    f'postgresql://postgres.{SUPABASE_PROJECT_REF}:{quote(SUPABASE_DB_PASSWORD, safe="")}'
-    f'@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require'
-)
-
-url = (
-    os.getenv('DATABASE_URL') or LOCAL_DOTENV.get('DATABASE_URL') or
-    (DEFAULT_DB_URL if SUPABASE_DB_PASSWORD else '')
-).strip('"\' \n\r')
-
-if url.startswith('postgresql:') and '://' not in url:
-    url = 'postgresql://' + url[len('postgresql:'):]
-
-if not url or 'izloztttkwcdfrxkqocb' in url or 'ciassthcelqvmjdajnyt' in url:
-    if not SUPABASE_DB_PASSWORD:
-        raise RuntimeError('Configura DATABASE_URL o SUPABASE_DB_PASSWORD en el entorno local.')
-    url = DEFAULT_DB_URL
-
-parsed = urlparse(url)
-is_ssl = (
-    'sslmode=require' in (parsed.query or '') or
-    'supabase' in (parsed.hostname or '') or
-    bool(os.getenv('VERCEL'))
-)
-
-DATABASES = {'default': {
-    'ENGINE': 'django.db.backends.postgresql',
-    'NAME': unquote(parsed.path.lstrip('/')),
-    'USER': unquote(parsed.username or ''),
-    'PASSWORD': unquote(parsed.password or ''),
-    'HOST': parsed.hostname or 'localhost',
-    'PORT': parsed.port or 5432,
-    'OPTIONS': {'sslmode': 'require' if is_ssl else 'prefer'},
-}}
+SUPABASE_KEY = setting('SUPABASE_KEY').strip()
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'interfaz']
