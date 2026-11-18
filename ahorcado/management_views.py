@@ -40,6 +40,17 @@ class ProtectedManagementView(LoginRequiredMixin, PermissionRequiredMixin):
             kwargs['actor'] = self.request.user
         return kwargs
 
+    def get_initial(self):
+        initial = super().get_initial()
+        if (
+            self.request.method == 'GET'
+            and self.model is User
+            and self.request.user.is_superuser
+            and self.request.GET.get('superuser') == '1'
+        ):
+            initial.update({'is_superuser': True, 'is_staff': True})
+        return initial
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         app_label = getattr(self, 'management_app_label', None)

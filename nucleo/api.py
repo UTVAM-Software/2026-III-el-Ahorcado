@@ -71,7 +71,7 @@ def endpoint(methods, auth=False, teacher=False):
                         return error('Acceso denegado. Se requiere rol de profesor.', 403)
                 return view(request, *args, **kwargs)
             except (OperationalError, DatabaseError):
-                return error('La base de datos se encuentra temporalmente inaccesible. Si el proyecto en Supabase está pausado, reanúdalo en el dashboard.', 503)
+                return error('La base de datos configurada no está disponible. Verifica la conexión y las credenciales.', 503)
         return wrapper
     return decorate
 

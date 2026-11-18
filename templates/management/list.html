@@ -24,6 +24,9 @@
     </tbody>
   </table></div>
   {% if is_paginated %}<nav class="paginacion">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}<span class="actual">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Siguiente</a>{% endif %}</nav>{% endif %}
-  {% if mode == 'list' and can_create %}<div class="management-create"><a class="btn-tabla btn-tabla-crear" href="nuevo/">Crear {{ resource_label|lower }}</a></div>{% endif %}
+  {% if mode == 'list' and can_add %}<div class="management-create">
+    <a class="btn-tabla btn-tabla-crear" href="nuevo/">Crear {{ resource_label|lower }}</a>
+    {% if resource_slug == 'users' and request.user.is_superuser %}<a class="btn-tabla btn-tabla-crear" href="nuevo/?superuser=1">Crear superusuario</a>{% endif %}
+  </div>{% endif %}
 </section>
 {% endblock %}

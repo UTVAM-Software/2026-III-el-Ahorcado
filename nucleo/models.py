@@ -1,5 +1,4 @@
 """Modelos compatibles con las tablas PostgreSQL de la aplicación anterior."""
-from django.contrib.postgres.fields import ArrayField
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -7,6 +6,7 @@ from django.utils import timezone
 DIFFICULTIES = [('easy', 'Fácil'), ('medium', 'Media'), ('hard', 'Difícil')]
 
 ROLE_CHOICES = [('student', 'Alumno'), ('teacher', 'Profesor'), ('supervisor', 'Supervisor')]
+WORD_MAX_LENGTH = 255
 
 
 class Player(models.Model):
@@ -51,7 +51,7 @@ class PasswordResetToken(models.Model):
 
 
 class Word(models.Model):
-    word = models.TextField(unique=True)
+    word = models.CharField(max_length=WORD_MAX_LENGTH, unique=True)
     difficulty = models.CharField(max_length=10, choices=DIFFICULTIES)
     theme = models.CharField(max_length=50, default='General')
     created_by = models.ForeignKey(Player, null=True, blank=True, on_delete=models.SET_NULL, db_column='created_by')
@@ -69,7 +69,7 @@ class AssignedGame(models.Model):
     student = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='assigned_as_student', db_column='student_id')
     theme = models.CharField(max_length=50, default='General')
     difficulty = models.CharField(max_length=10, choices=DIFFICULTIES)
-    word_ids = ArrayField(models.IntegerField(), default=list)
+    word_ids = models.JSONField(default=list)
     current_index = models.IntegerField(default=0)
     status = models.CharField(max_length=12, default='pending')
     created_at = models.DateTimeField(default=timezone.now)
@@ -85,8 +85,8 @@ class Game(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE, db_column='player_id')
     word = models.ForeignKey(Word, on_delete=models.PROTECT, db_column='word_id')
     difficulty = models.CharField(max_length=10, choices=DIFFICULTIES)
-    guessed = ArrayField(models.TextField(), default=list)
-    wrong = ArrayField(models.TextField(), default=list)
+    guessed = models.JSONField(default=list)
+    wrong = models.JSONField(default=list)
     wrong_attempts = models.IntegerField(default=0)
     attempts = models.IntegerField(default=0)
     status = models.CharField(max_length=10, default='playing')
